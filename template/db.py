@@ -1,6 +1,7 @@
 from template.table import Table
 
-class Database():
+
+class Database:
 
     def __init__(self):
         self.tables = []
@@ -18,6 +19,7 @@ class Database():
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
+
     def create_table(self, name, num_columns, key):
         table = Table(name, num_columns, key)
         return table
@@ -25,11 +27,13 @@ class Database():
     """
     # Deletes the specified table
     """
+
     def drop_table(self, name):
         pass
 
     """
     # Returns table with the passed name
     """
+
     def get_table(self, name):
         pass
