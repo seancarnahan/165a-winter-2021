@@ -18,8 +18,12 @@ class TestDBMethods(unittest.TestCase):
     def test_get(self):
         db = Database()
         get_table = db.create_table('get', 0, 5)
-        db.get_table(get_table.name)
-        self.assertTrue(db)
+        self.assertEqual(get_table, db.get_table(get_table.name), 'retrieved table is not the same')
+
+    def test_fail_get(self):
+        db = Database()
+        name = 'get'
+        self.assertRaises(Exception, db.get_table, name)
 
 
 if __name__ == '__main__':
