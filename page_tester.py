@@ -5,7 +5,7 @@ from template.page import Page
 def test_has_capacity():
     page = Page()
 
-    for i in range(10000):
+    for i in range(999):
         page.write(i)
 
     if page.has_capacity() == True:
@@ -14,7 +14,7 @@ def test_has_capacity():
         print("Error in [test_has_capacity]: 1")
         return False
 
-    page.num_records = 1024000
+    page.num_records = 1000
 
     if page.has_capacity() == False:
         pass
@@ -22,7 +22,7 @@ def test_has_capacity():
         print("Error in [test_has_capacity]: 2")
         return False
 
-    page.num_records = 1023999
+    page.num_records = 999
 
     if page.has_capacity() == True:
         return True
@@ -34,16 +34,16 @@ def test_has_capacity():
 def test_write():
     page = Page()
 
-    for i in range(10000):
+    for i in range(1000):
         page.write(i)
 
-    if page.num_records == 10000:
+    if page.num_records == 1000:
         pass
     else:
         print("Error in [test_write]: 1")
         return False
 
-    if len(page.data) == 40000:
+    if len(page.data) == 4000:
         return True
     else:
         print("Error in [test_write]: 2")
@@ -53,7 +53,7 @@ def test_write():
 def test_getRecord():
     page = Page()
 
-    for i in range(10000):
+    for i in range(1000):
         page.write(i)
     
     if page.getRecord(1) == 1:
@@ -62,13 +62,13 @@ def test_getRecord():
         print("Error in [test_getRecord]: 1")
         return False
 
-    if page.getRecord(9999) == 9999:
+    if page.getRecord(999) == 999:
         pass
     else:
         print("Error in [test_getRecord]: 2")
         return False
 
-    if page.getRecord(10000) == False:
+    if page.getRecord(1000) == False:
         return True
     else:
         print("Error in [test_getRecord]: 3")
@@ -79,7 +79,7 @@ def test_getRecord():
 def test_replaceRecord():
     page = Page()
 
-    for i in range(10000):
+    for i in range(1000):
         page.write(i)
 
     if page.replaceRecord(2, 100000) == True:
@@ -94,7 +94,7 @@ def test_replaceRecord():
         print("Error in [test_replaceRecord]: 2")
         return False
 
-    if page.getRecord(10000) == False:
+    if page.getRecord(1000) == False:
         return True
     else:
         print("Error in [test_replaceRecord]: 3")
@@ -105,7 +105,7 @@ def test_replaceRecord():
 def test_removeRecord():
     page = Page()
 
-    for i in range(10000):
+    for i in range(1000):
         page.write(i)
     
     if page.removeRecord(2) == True:
@@ -120,13 +120,13 @@ def test_removeRecord():
         print("Error in [test_removeRecord]: 2")
         return False
 
-    if page.removeRecord(10000) == False:
+    if page.removeRecord(1000) == False:
         pass
     else:
         print("Error in [test_removeRecord]: 3")
         return False
 
-    if page.num_records == 9999:
+    if page.num_records == 999:
         return True
     else:
         print("Error in [test_removeRecord]: 4")

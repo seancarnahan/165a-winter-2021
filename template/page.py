@@ -1,18 +1,18 @@
 from template.config import *
 
-#can store 4096kb
+#can store 4000kb
 #4 bytes is allocated for each record
-#1024000 max records per page
+#1000 max records per page
 class Page:
 
     def __init__(self):
-        self.num_records = 0 #max: 1,024,000 records
+        self.num_records = 0 #max: 1000
         self.data = bytearray()
     
-    #if num_records < 1024000 return true
-    #if num_records >= 1024000 return false
+    #if num_records < 1000 return true
+    #if num_records >= 1000 return false
     def has_capacity(self):
-        if self.num_records >= 1024000:
+        if self.num_records >= PageSize:
             return False
         else:
             return True
@@ -70,7 +70,7 @@ class Page:
         else:
             return False
         
-    #input: index from 0 - 1023999
+    #input: index from 0 - 999
     #output: a list [x1,x2] (inclusive,exclusive)
     #indexes will allow you to retreive a slice from self.data
     @staticmethod
