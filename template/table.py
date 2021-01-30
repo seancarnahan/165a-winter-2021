@@ -57,7 +57,7 @@ class Table:
         record = Record(key, indirection, RID, timeStamp, encoding, columns)
 
         #create new Page Range
-        if self.latestRID > (PageSize * (self.currPageRangeIndex + 1)) - 1:
+        if self.latestRID > (PAGE_SIZE * (self.currPageRangeIndex + 1)) - 1:
             newPageRange = PageRange(self.num_columns)
 
             self.pageRanges.append(newPageRange)
