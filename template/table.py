@@ -4,11 +4,6 @@ from template.config import *
 
 from time import time
 
-INDIRECTION_COLUMN = 0
-RID_COLUMN = 1
-TIMESTAMP_COLUMN = 2
-SCHEMA_ENCODING_COLUMN = 3
-
 class Record:
 
     #input: columns = list of integers
@@ -42,7 +37,7 @@ class Table:
     def __init__(self, name, num_columns, key):
         self.name = name
         self.key = key
-        self.num_columns = num_columns + 4
+        self.num_columns = num_columns + RECORD_COLUMN_OFFSET
         self.page_directory = PageDiretory(self.num_columns)
         self.index = Index(self)
 
@@ -64,15 +59,15 @@ class Table:
         #create new Page Range
         if self.latestRID > (PageSize * (self.currPageRangeIndex + 1)) - 1:
             newPageRange = PageRange(self.num_columns)
-            
+
             self.pageRanges.append(newPageRange)
             self.currPageRangeIndex += 1
-            
-        
+
+
         #add record to Page Range based on currPageRangeIndex
         pageRange = self.pageRanges[self.currPageRangeIndex]
         pageRange.setBasePageRecord(record)
-    
+
     #UPDATE -> tail pages
     def updateRecord(self):
         pass
@@ -103,7 +98,7 @@ class Table:
         return self.latestRID
 
     def getInitialEncoding(self):
-        #TODO: maybe swithch this to a bitmap 
+        #TODO: maybe swithch this to a bitmap
         encoding = ""
         for i in range(self.num_columns):
             encoding += "0"
@@ -126,25 +121,25 @@ class PageRange:
         self.num_columns = num_columns
         self.basePages = []
 
-        #key: column index 
+        #key: column index
         #value: list of tailpages, when one tail page runs out add a new on to the list
         self.tailPages = {}
-        
+
         for col in range(num_columns):
             self.basePages.append(Page())
 
             self.tailPages[col] = [Page()]
-    
+
     def setBasePageRecord(self, record):
         self.basePages[INDIRECTION_COLUMN].write(record.indirection)
         self.basePages[RID_COLUMN].write(record.RID)
         self.basePages[TIMESTAMP_COLUMN].write(record.timestamp)
         self.basePages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
 
-        for col in range(4, 4 + len(record.columns)):
-            columnData = record.columns[col - 4]
+        for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
+            columnData = record.columns[col - RECORD_COLUMN_OFFSET]
 
-            self.basePages[col].write(columnData)            
+            self.basePages[col].write(columnData)
 
 # Given a RID, the page directory returns the location of the certain
 # record inside the page within the page range. The efficiency of this data structure is a
@@ -153,6 +148,6 @@ class PageDiretory:
 
     def __init__(self, num_columns):
         pass
-            
 
- 
+
+
