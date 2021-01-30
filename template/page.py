@@ -12,7 +12,7 @@ class Page:
     #if num_records < 1000 return true
     #if num_records >= 1000 return false
     def has_capacity(self):
-        if self.num_records >= PageSize:
+        if self.num_records >= PAGE_SIZE:
             return False
         else:
             return True
@@ -75,7 +75,7 @@ class Page:
     #indexes will allow you to retreive a slice from self.data
     @staticmethod
     def getRecordIndexes(index):
-        return[index * 4, (index * 4) + 4]
+        return [index * RECORD_COLUMN_OFFSET, (index+1) * RECORD_COLUMN_OFFSET]
 
     #input: an interger -> must convert to 4 bytes, make sure its not too long
     #output: the hex(integer) in a bytearray format
