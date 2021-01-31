@@ -18,7 +18,7 @@ The Page Range encompasses the base pages and tails pages of a table.
 
 At first we create a set of base pages (let's say 16) and a single tail page for each column.
 
-![Page Range Img](pageRange.png)
+![Page Range Img](images/pageRange.png)
 
 ### Notes
 
