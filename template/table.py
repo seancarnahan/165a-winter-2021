@@ -38,20 +38,22 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDiretory(self.num_columns)
+        self.page_directory = PageDiretory(num_columns)
         self.index = Index(self)
 
         self.latestRID = None
         self.currPageRangeIndex = 0
-        self.pageRanges = self.generatePageRangeMapping()
+
 
     #INSERT -> base pages
     #columns: list of integers with their index mapped to their corresponding column
+    #test that this works
     def createNewRecord(self, key, columns):
+
         indirection = None
         RID = self.getNewRID()
         timeStamp = self.getNewTimeStamp()
-        encoding = self.getInitialEncoding()
+        encoding = 0
 
         #create Record Object
         record = Record(key, indirection, RID, timeStamp, encoding, columns)
@@ -60,34 +62,60 @@ class Table:
         if self.latestRID > (PAGE_SIZE * (self.currPageRangeIndex + 1)) - 1:
             newPageRange = PageRange(self.num_columns)
 
-            self.pageRanges.append(newPageRange)
+            self.page_directory.pageRanges.append(newPageRange)
             self.currPageRangeIndex += 1
 
-
         #add record to Page Range based on currPageRangeIndex
-        pageRange = self.pageRanges[self.currPageRangeIndex]
+        pageRange = self.page_directory.pageRanges[self.currPageRangeIndex]
         pageRange.setBasePageRecord(record)
 
+
     #UPDATE -> tail pages
-    def updateRecord(self):
-        pass
+    #RID: is the record that you would like to update
+    #values: is the values that you would like to add, excluding encoding, timestamp etc
+    def updateRecord(self, key, RID, values):
 
-    #DELETE
-    def deleteRecord(self):
-        pass
+        #record location -> could be a tail or base
+        currPageRangeIndex = self.page_directory.getRecordLocation(RID, True)[0]
+        currPageIndex = self.page_directory.getRecordLocation(RID, True)[1]
+        currTailPageIndex = self.page_directory.getRecordLocation(RID, True)[2]
 
-    #SELECT
-    def getRecord(self):
-        pass
+        currEncoding = self.page_directory.pageRanges[currPageRangeIndex].basePages[SCHEMA_ENCODING_COLUMN].getRecord(currPageIndex)
+        currIndirection = self.page_directory.pageRanges[currPageRangeIndex].basePages[INDIRECTION_COLUMN].getRecord(currPageIndex)
+        
+        #check the encoding of the base page until you find the latest updated record -> could be tail record or base record
+        while(currEncoding != 1):
+            #check for record in tail pages
+            currPageRangeIndex = self.page_directory.getRecordLocation(currIndirection, False)[0]
+            currPageIndex = self.page_directory.getRecordLocation(currIndirection, False)[1]
+            currTailPageIndex = self.page_directory.getRecordLocation(currIndirection, False)[2]
 
-    #ranged queries
-    def getRecords(self):
-        pass
+            currEncoding = self.page_directory.pageRanges[currPageRangeIndex].tailPages[SCHEMA_ENCODING_COLUMN][currTailPageIndex].getRecord(currPageIndex)
+            currIndirection = self.page_directory.pageRanges[currPageRangeIndex].tailPages[INDIRECTION_COLUMN][currTailPageIndex].getRecord(currPageIndex)
 
-    #list of pageRanges
-    #index (0 = within 1000 records, 1 = 1001 - 2000 records) based on config.pageSize
-    def generatePageRangeMapping(self):
-        return [PageRange(self.num_columns)]
+        #currIndirection should be set to None
+        #currEncoding should be set to None
+        #new tail page RID
+        newRID = self.getNewRID()
+        pageRange = self.page_directory.pageRanges[currPageRangeIndex]
+
+        #set the latest updated record indirection to new tail page RID
+        pageRange[INDIRECTION_COLUMN] = newRID
+
+        #set the latest updated record encoding to 1
+        pageRange[SCHEMA_ENCODING_COLUMN] = 1
+
+
+        #create tail page record
+        indirection = None
+        timeStamp = self.getNewTimeStamp()
+        encoding = 0
+
+        tailRecord = Record(key, indirection, newRID, timeStamp, encoding, values)
+
+        #check if tail page has exceeded its limits: if true then create new page range
+
+        #add tail page record to tail page
 
     def getNewRID(self):
         if self.latestRID == None:
@@ -97,19 +125,11 @@ class Table:
 
         return self.latestRID
 
-    def getInitialEncoding(self):
-        #TODO: maybe swithch this to a bitmap
-        encoding = ""
-        for i in range(self.num_columns):
-            encoding += "0"
-        return encoding
-
+    #test: make sure this works
     def getNewTimeStamp(self):
         #miliseconds from epoch as an integer
         return round(time().time() * 1000)
 
-    def updateIndirection(self):
-        pass
 
     #Ignore merge until milestone 2
     # def __merge(self):
@@ -141,13 +161,27 @@ class PageRange:
 
             self.basePages[col].write(columnData)
 
-# Given a RID, the page directory returns the location of the certain
-# record inside the page within the page range. The efficiency of this data structure is a
-# key factor in performance.
+    def setTailPageRecord(self, record):
+        self.basePages[INDIRECTION_COLUMN].write(record.indirection)
+        self.basePages[RID_COLUMN].write(record.RID)
+        self.basePages[TIMESTAMP_COLUMN].write(record.timestamp)
+        self.basePages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+
+
+#PageDirectory = [PageRange()]
 class PageDiretory:
 
     def __init__(self, num_columns):
+            #list of pageRanges
+            #index (0 = within 1000 records, 1 = 1001 - 2000 records) based on config.pageSize
+            self.pageRanges = [ PageRange(num_columns) ]
+
+    #input: RID; True = base type; False = tail type
+    #base page output: [pageRangeIndex, index location of record with the Page Range]
+    #tail page output: [pageRangeIndex, index location of record with the Page Range, tailPageIndex]
+    def getRecordLocation(self, RID, head_flag):
         pass
+
 
 
 
