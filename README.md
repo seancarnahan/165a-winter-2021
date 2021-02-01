@@ -64,6 +64,13 @@ At first we create a set of base pages (let's say 16) and a single tail page for
 -
 -
 
+### how updateRecord in Table works:
+      
+- Given an RID of the record you would like to update
+    - 1. first add the tail page to the correct Page Range and return the RID of the new tail page
+    - 2. next go into the base page and change encoding to 1, and then change indirection to the new RID
+    - note its up to the query to get the most updated values and combine them with the new values and the call updateRecord()
+
 ## Data Structure
 -          PageRanges [
                 pageRange: 0: 0 - 5000 records #cutoff: 5000 records 
@@ -74,17 +81,3 @@ At first we create a set of base pages (let's say 16) and a single tail page for
                     [physicalpage for col0, page for col1, page for col2], => base page 4 : 1000 records #4kb * cols
                 pageRange: 1: 5001 - 10000 records
             ]
-
-### SCRATCH
-    def __init__(self, num_columns):
-        self.num_columns = num_columns
-        self.basePages = []
-
-        #key: column index
-        #value: list of tailpages, when one tail page runs out add a new on to the list
-        self.tailPages = {}
-
-        for col in range(num_columns):
-            self.basePages.append(Page())
-
-            self.tailPages[col] = [Page()]
