@@ -42,16 +42,18 @@ class Table:
         self.index = Index(self)
 
         self.latestRID = None
-        self.currPageRangeIndex = 0
 
+        self.currPageRangeIndex = 0
+        #self.currPageIndex = 0
 
     #INSERT -> base pages
     #columns: list of integers with their index mapped to their corresponding column
     #test that this works
     def createNewRecord(self, key, columns):
 
-        indirection = None
+        
         RID = self.getNewRID()
+        indirection = 0
         timeStamp = self.getNewTimeStamp()
         encoding = 0
 
@@ -128,57 +130,126 @@ class Table:
     #test: make sure this works
     def getNewTimeStamp(self):
         #miliseconds from epoch as an integer
-        return round(time().time() * 1000)
-
+        return int(time())
 
     #Ignore merge until milestone 2
     # def __merge(self):
     #     pass
+class BasePage:
+    def __init__(self, num_columns):
+        self.basePage = []
+
+        for _ in range(num_columns):
+            self.basePage.append(Page())
+
+
+    def setBasePageRecord(self, record):
+        self.basePage[INDIRECTION_COLUMN].write(record.indirection)
+        self.basePage[RID_COLUMN].write(record.RID)
+        self.basePage[TIMESTAMP_COLUMN].write(record.timestamp)
+        self.basePage[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+
+        for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
+            columnData = record.columns[col - RECORD_COLUMN_OFFSET]
+
+            self.basePage[col].write(columnData)
+
+    def hasCapacity(self):
+        pass
+
+class TailPage:
+    def __init__(self, num_columns):
+        pass
+
+    def setTailPageRecord(self, record):
+        # self.basePages[INDIRECTION_COLUMN].write(record.indirection)
+        # self.basePages[RID_COLUMN].write(record.RID)
+        # self.basePages[TIMESTAMP_COLUMN].write(record.timestamp)
+        # self.basePages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+        pass
+    
+    def hasCapacity(self):
+        pass
 
 class PageRange:
 
     def __init__(self, num_columns):
         self.num_columns = num_columns
-        self.basePages = []
+        self.maxNumOfBasePages = self.getPageRangeCapacity()
+        self.currBasePageIndex = 0
+        
+        #list of type BasePage
+        self.basePages = [BasePage(self.num_columns)]
 
         #key: column index
-        #value: list of tailpages, when one tail page runs out add a new on to the list
-        self.tailPages = {}
+        #value: list of type TailPage, when one tail page runs out add a new on to the list
+        self.tailPages = {0: [TailPage(self.num_columns)]}
 
-        for col in range(num_columns):
-            self.basePages.append(Page())
+    def insertBaseRecord(self, record):
+        currBasePage = self.basePages[self.currBasePageIndex]
 
-            self.tailPages[col] = [Page()]
+        if currBasePage.hasCapacity():
+            currBasePage.setBasePageRecord(record)
+        else:
+            self.addNewBasePage()
+            self.currBasePageIndex += 1
 
-    def setBasePageRecord(self, record):
-        self.basePages[INDIRECTION_COLUMN].write(record.indirection)
-        self.basePages[RID_COLUMN].write(record.RID)
-        self.basePages[TIMESTAMP_COLUMN].write(record.timestamp)
-        self.basePages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+    def insertTailRecord(self):
+        pass
 
-        for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
-            columnData = record.columns[col - RECORD_COLUMN_OFFSET]
+    def addNewBasePage(self):
+        self.basePages.append(BasePage(self.num_columns))
 
-            self.basePages[col].write(columnData)
+    def addNewTailPage(self):
+        pass
 
-    def setTailPageRecord(self, record):
-        self.basePages[INDIRECTION_COLUMN].write(record.indirection)
-        self.basePages[RID_COLUMN].write(record.RID)
-        self.basePages[TIMESTAMP_COLUMN].write(record.timestamp)
-        self.basePages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+    #figure out how many many base pages can fit into PAGE RANGE without exceeding MAX_PAGE_RANGE_SIZE
+    #return number of Base Pages
+    def getPageRangeCapacity(self):
+        maxBasePageSize = self.num_columns
 
+        while((maxBasePageSize + self.num_columns) <=  MAX_PAGE_RANGE_SIZE):
+            maxBasePageSize += self.num_columns
+
+        return maxBasePageSize / self.num_columns
+
+    #True if Page Range has capacity for another Base Page, if not PageDir should create another PageRange
+    def hasCapacity(self):
+        if len(self.basePages) >= self.maxNumOfBasePages:
+            return False
+        else:
+            return True
+        
 
 #PageDirectory = [PageRange()]
 class PageDiretory:
 
     def __init__(self, num_columns):
-            #list of pageRanges
-            #index (0 = within 1000 records, 1 = 1001 - 2000 records) based on config.pageSize
-            self.pageRanges = [ PageRange(num_columns) ]
+        #list of pageRanges
+        #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
+        self.num_columns = num_columns
+        self.pageRanges = [PageRange(num_columns)]
+        self.currPageRangeIndex = 0
 
-    #input: RID; True = base type; False = tail type
-    #base page output: [pageRangeIndex, index location of record with the Page Range]
-    #tail page output: [pageRangeIndex, index location of record with the Page Range, tailPageIndex]
+    #get the latest unfilled page Range
+    def getCurrentUnfilledPageRange(self):
+        currPageRange = self.pageRanges[self.currPageRangeIndex]
+        
+        if currPageRange.hasCapacity():
+            return currPageRange
+        else:
+            self.addNewPageRange()
+            return self.pageRanges[self.currPageRangeIndex]
+
+    def addNewPageRange(self):
+        self.pageRanges.append(PageRange(self.num_columns))
+        self.currPageRangeIndex += 1
+
+    #input: RID
+    #output: [type, pageRangeIndex, pageIndex]
+       #type -> Base Page = 1 ; Tail Page = 2
+    #pageRangeIndex -> 0 : Base Page 0; 1 : Base Page 1 (0 - how many Base Pages there are)
+    #pageIndex -> the row index: 0 -> (PageSize - 1)
     def getRecordLocation(self, RID, head_flag):
         pass
 

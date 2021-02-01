@@ -63,3 +63,28 @@ At first we create a set of base pages (let's say 16) and a single tail page for
 -
 -
 -
+
+## Data Structure
+-          PageRanges [
+                pageRange: 0: 0 - 5000 records #cutoff: 5000 records 
+                    [physicalpage for col0, page for col1, page for col2], => base page 0 : 1000 records #4kb * cols
+                    [physicalpage for col0, page for col1, page for col2], => base page 1 : 1000 records #4kb * cols
+                    [physicalpage for col0, page for col1, page for col2], => base page 2 : 1000 records #4kb * cols
+                    [physicalpage for col0, page for col1, page for col2], => base page 3 : 1000 records #4kb * cols
+                    [physicalpage for col0, page for col1, page for col2], => base page 4 : 1000 records #4kb * cols
+                pageRange: 1: 5001 - 10000 records
+            ]
+
+### SCRATCH
+    def __init__(self, num_columns):
+        self.num_columns = num_columns
+        self.basePages = []
+
+        #key: column index
+        #value: list of tailpages, when one tail page runs out add a new on to the list
+        self.tailPages = {}
+
+        for col in range(num_columns):
+            self.basePages.append(Page())
+
+            self.tailPages[col] = [Page()]

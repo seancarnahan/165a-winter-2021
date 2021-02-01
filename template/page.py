@@ -75,7 +75,7 @@ class Page:
     #indexes will allow you to retreive a slice from self.data
     @staticmethod
     def getRecordIndexes(index):
-        return [index * RECORD_COLUMN_OFFSET, (index+1) * RECORD_COLUMN_OFFSET]
+        return [index * PAGE_RECORD_SIZE, (index+1) * PAGE_RECORD_SIZE]
 
     #input: an interger -> must convert to 4 bytes, make sure its not too long
     #output: the hex(integer) in a bytearray format
