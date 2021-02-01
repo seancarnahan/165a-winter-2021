@@ -51,7 +51,6 @@ class Table:
     #test that this works
     def createNewRecord(self, key, columns):
 
-        
         RID = self.getNewRID()
         indirection = 0
         timeStamp = self.getNewTimeStamp()
@@ -60,16 +59,8 @@ class Table:
         #create Record Object
         record = Record(key, indirection, RID, timeStamp, encoding, columns)
 
-        #create new Page Range
-        if self.latestRID > (PAGE_SIZE * (self.currPageRangeIndex + 1)) - 1:
-            newPageRange = PageRange(self.num_columns)
-
-            self.page_directory.pageRanges.append(newPageRange)
-            self.currPageRangeIndex += 1
-
-        #add record to Page Range based on currPageRangeIndex
-        pageRange = self.page_directory.pageRanges[self.currPageRangeIndex]
-        pageRange.setBasePageRecord(record)
+        #insert a new record -> all the checks for capacity are done implicitly
+        self.page_directory.insertBaseRecord(record)
 
 
     #UPDATE -> tail pages
@@ -138,6 +129,7 @@ class Table:
 class BasePage:
     def __init__(self, num_columns):
         self.basePage = []
+        self.numOfRecords = 0
 
         for _ in range(num_columns):
             self.basePage.append(Page())
@@ -153,12 +145,20 @@ class BasePage:
             columnData = record.columns[col - RECORD_COLUMN_OFFSET]
 
             self.basePage[col].write(columnData)
+            self.numOfRecords += 1
 
     def hasCapacity(self):
-        pass
+        if self.numOfRecords >= PAGE_SIZE:
+            #page is full
+            return False
+        else:
+            #there is still room to add at least 1 more record
+            return True
+        
 
 class TailPage:
     def __init__(self, num_columns):
+        self.numOfRecords = 0
         pass
 
     def setTailPageRecord(self, record):
@@ -190,15 +190,25 @@ class PageRange:
 
         if currBasePage.hasCapacity():
             currBasePage.setBasePageRecord(record)
+            return True #succesfully inserted a new record into Page Rage
         else:
-            self.addNewBasePage()
-            self.currBasePageIndex += 1
+            if self.addNewBasePage():
+                self.currBasePageIndex += 1
+                return True #succesfully inserted a new record into Page Rage
+            else:
+                #there is no more room in Page Range, need to tell PageDir to make a new one
+                return False #FAILED to insert a record into page Range
 
     def insertTailRecord(self):
         pass
 
     def addNewBasePage(self):
-        self.basePages.append(BasePage(self.num_columns))
+        if self.hasCapacity():
+            self.basePages.append(BasePage(self.num_columns))
+            return True
+        else:
+            return False
+  
 
     def addNewTailPage(self):
         pass
@@ -219,7 +229,7 @@ class PageRange:
             return False
         else:
             return True
-        
+
 
 #PageDirectory = [PageRange()]
 class PageDiretory:
@@ -231,15 +241,20 @@ class PageDiretory:
         self.pageRanges = [PageRange(num_columns)]
         self.currPageRangeIndex = 0
 
-    #get the latest unfilled page Range
-    def getCurrentUnfilledPageRange(self):
+    def insertBaseRecord(self, record):
         currPageRange = self.pageRanges[self.currPageRangeIndex]
-        
-        if currPageRange.hasCapacity():
-            return currPageRange
-        else:
+
+        if currPageRange.insertBaseRecord(record): 
+            #successfully added a record into pageDir
+            pass
+        else: 
+            #create new Page Range and add the record to the new Page Range
             self.addNewPageRange()
-            return self.pageRanges[self.currPageRangeIndex]
+            currPageRange = self.pageRanges[self.currPageRangeIndex]
+            currPageRange.insertBaseRecord(record)
+
+    def insertTailRecord(self):
+        pass
 
     def addNewPageRange(self):
         self.pageRanges.append(PageRange(self.num_columns))
