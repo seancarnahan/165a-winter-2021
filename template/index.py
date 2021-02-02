@@ -5,7 +5,7 @@ can be used as well.
 
 Index will be RHash
 """
-from collections import defaultdict
+from collections import defaultdict, Iterable
 from config import *
 
 
@@ -58,9 +58,18 @@ class Index:
         :param column: int. The column to search under with column's index.
         :returns: A list of RIDs that have a value that falls between [begin,end] in column "column".
         """
-        if self.indices[column] is None:
-            raise InvalidIndexError(column);
-        pass
+        try:
+            if self.indices[column] is None:
+                raise InvalidIndexError(column)
+        except IndexError:
+            raise InvalidColumnError(column)
+
+        matching_rids = []
+        for value in range(begin, end):
+            if isinstance(self.indices[column][value], Iterable):
+                matching_rids.extend(self.indices[column][value])
+
+        return matching_rids
 
     def create_index(self, column_number):
         """
@@ -91,7 +100,7 @@ class Index:
         try:
             self.indices[column_number] = None
         except IndexError:
-            raise InvalidIndexError(column_number);
+            raise InvalidIndexError(column_number)
 
     def update_index(self, column_number, rids, oldValues, newValues):
         """
@@ -131,7 +140,7 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column_number)
 
-        for rid, key in zip(rids,values):
-            self.indices[column_number][key].append(rid);
+        for rid, key in zip(rids, values):
+            self.indices[column_number][key].append(rid)
 
         return True
