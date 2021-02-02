@@ -12,16 +12,22 @@ class Query:
 
     def __init__(self, table):
         self.table = table
-        pass
 
     """
     # internal Method
     # Read a record with specified RID
     # Returns True upon succesful deletion
     # Return False if record doesn't exist or is locked due to 2PL
+    When a record is deleted, the base record will be
+    invalidated by setting the RID of itself and all its tail records to a special value
     """
     def delete(self, key):
-        pass
+        try:
+            updateRecord(key, RID, None)
+            return True
+        except:
+            return False
+
 
     """
     # Insert a record with specified columns
@@ -30,7 +36,11 @@ class Query:
     """
     def insert(self, *columns):
         schema_encoding = '0' * self.table.num_columns
-        pass
+        try:
+            self.table.createNewRecord(key, *columns)
+            return True
+        except:
+            return False
 
     """
     # Read a record with specified key
@@ -41,7 +51,24 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, key, column, query_columns):
-        pass
+        # hash key to get rid
+        recordLoc = self.table.page_directory.getRecordLocation(rid)
+        record = self.table.page_directory.getPhysicalPages(recordLoc[0],
+                                                            recordLoc[1],
+                                                            recordLoc[2],
+                                                            recordLoc[3])
+        valueList = []
+        counter = 0
+        try:
+            for bit in query_columns:
+                counter += 1
+                if bit == 1:
+                    value = record.columns[counter - 1]
+                    valueList.append(value)
+            return valueList
+        except:
+            return False
+
 
     """
     # Update a record with specified key and columns
@@ -49,7 +76,11 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
     def update(self, key, *columns):
-        pass
+        try:
+            self.table.updateRecord(key, RID, *columns)
+            return True
+        except:
+            return False
 
     """
     :param start_range: int         # Start of the key range to aggregate 
@@ -60,7 +91,21 @@ class Query:
     # Returns False if no record exists in the given range
     """
     def sum(self, start_range, end_range, aggregate_column_index):
-        pass
+        index = Index(self.table)
+        ridRange = index.locate_range(start_range, end_range,
+                                      aggregate_column_index)
+        sum = 0
+        try:
+            while rid in ridRange:
+                recordLoc = self.table.page_directory.getRecordLocation(rid)
+                record = self.table.page_directory.getPhysicalPages(
+                    recordLoc[0], recordLoc[1], recordLoc[2], recordLoc[3])
+                value = record.columns[aggregate_column_index]
+                sum += value
+            return sum
+        except:
+            return False
+
 
     """
     incremenets one column of the record
@@ -79,4 +124,3 @@ class Query:
             return u
         return False
 
-#test
