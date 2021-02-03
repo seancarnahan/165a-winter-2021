@@ -25,9 +25,11 @@ class Record:
         self.columns = columns
 
     #input: record location
-    #output: record location in integer form
+    #output: record location in integer form; #example: 123456789
+    
     def getNewRID(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
-        return 123456789
+        num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex(10**4) + locPhyPageIndex
+        return num
 
 class Table:
 
@@ -198,9 +200,6 @@ class PageRange:
             #write to the pages
             return currTailPage.setPageRecord(record, recordLocation)
 
-            
-   
-
     def addNewBasePage(self):
         if self.hasCapacity():
             self.currBasePageIndex += 1
@@ -296,7 +295,14 @@ class PageDiretory:
             return self.pageRanges[locPRIndex].tailPages[locBPIndex]
 
     #input: RID
-    #output: # record location = [locType, locPRIndex, locBPIndex or locTPIndex, locPhyPageIndex]
+    #output: # record location = [locType, locPRIndex, locBPIndex or locTPIndex, locPhyPageIndex]; EX: [1,23,45,6789]
+    # CONSIDER: using Bitwise operations to improve speed
     def getRecordLocation(self, RID):
-        return [1,23,45,6789]
+        locPhyPageIndex = RID % 10000
+        RID //= 10000
+        lock_PIndex = RID % 100
+        RID //=100
+        locPRIndex = RID % 100
+        RID //= 100
+        return [RID, locPRIndex, lock_PIndex, locPhyPageIndex]
         
