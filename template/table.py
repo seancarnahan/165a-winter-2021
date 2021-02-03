@@ -252,7 +252,7 @@ class PageDiretory:
 
         if currPageRange.insertBaseRecord(record, recordLocation): 
             #successfully added a record into pageDir
-            pass
+            return True
         else: 
             #create new Page Range and add the record to the new Page Range
             self.addNewPageRange()
@@ -263,6 +263,7 @@ class PageDiretory:
             recordLocation = [locType, locPRIndex]
 
             currPageRange.insertBaseRecord(record, recordLocation)
+            return True
 
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, baseRID, record):
@@ -288,9 +289,9 @@ class PageDiretory:
 
     #LocType, locPRIndex, locBPIndex or locTpIndex, locPhyPageIndex
     def getPhysicalPages(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
-        if locBPIndex == 1:
+        if locType == 1:
             #base Page
-            self.pageRanges[locPRIndex].basePages[locBPIndex]
+            return self.pageRanges[locPRIndex].basePages[locBPIndex]
         else:
             #tail Page
             return self.pageRanges[locPRIndex].tailPages[locBPIndex]
