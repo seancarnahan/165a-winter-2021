@@ -6,7 +6,7 @@ can be used as well.
 Index will be RHash
 """
 from collections import defaultdict, Iterable
-from config import *
+from template.config import  *
 
 
 class InvalidIndexError(Exception):
