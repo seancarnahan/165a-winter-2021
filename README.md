@@ -22,7 +22,6 @@ At first we create a set of base pages (let's say 16) and a single tail page for
 
 "Each base page (or tail page) consists of a set of physical pages (4 KB each), <b>one for each column</b>."
 
-
 ### Notes
 
 - Starts with only 1 tail page at first. Add more as you fill them up
