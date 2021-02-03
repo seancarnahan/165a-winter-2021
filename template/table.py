@@ -101,7 +101,7 @@ class PhysicalPages:
         self.physicalPages = []
         self.numOfRecords = 0
 
-        for _ in range(num_columns):
+        for _ in range(num_columns+RECORD_COLUMN_OFFSET):
             self.physicalPages.append(Page())
 
     # record location = [locType, locPRIndex, locBPIndex or locTPIndex]
@@ -123,7 +123,8 @@ class PhysicalPages:
             columnData = record.columns[col - RECORD_COLUMN_OFFSET]
 
             self.physicalPages[col].write(columnData)
-            self.numOfRecords += 1
+
+        self.numOfRecords += 1
         
         return RID
 
