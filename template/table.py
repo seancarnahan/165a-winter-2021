@@ -40,7 +40,7 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDiretory(num_columns)
+        self.page_directory = PageDirectory(num_columns)
         self.index = Index(self)
 
         self.latestRID = None
@@ -233,7 +233,7 @@ class PageRange:
 
 
 #PageDirectory = [PageRange()]
-class PageDiretory:
+class PageDirectory:
 
     def __init__(self, num_columns):
         #list of pageRanges
