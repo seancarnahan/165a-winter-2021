@@ -176,6 +176,8 @@ class PhysicalPages:
         #create New RID with record Location
         RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
 
+        record.RID = RID
+
         self.physicalPages[INDIRECTION_COLUMN].write(record.indirection)
         self.physicalPages[RID_COLUMN].write(RID)
         self.physicalPages[TIMESTAMP_COLUMN].write(record.timestamp)
