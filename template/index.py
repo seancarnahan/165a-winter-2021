@@ -6,7 +6,8 @@ can be used as well.
 Index will be RHash
 """
 from collections import defaultdict
-from template.config import  *
+from template.config import *
+
 
 
 class InvalidIndexError(Exception):
@@ -31,6 +32,17 @@ class Index:
         self.indices = [None] * table.num_columns
         self.seeds = [None] * table.num_columns
         self.table = table
+
+    def insert(self, rid, values):
+        for i in len(self.indices):
+            if self.indices[i] is not None:
+                self.insertIntoIndex(i, rid, values[i])
+
+    def updateIndexes(self, rid, oldValues, newValues):
+        for i in len(self.indices):
+            if self.indices[i] is not None:
+                if oldValues[i] != newValues[i]:
+                    self.update_index(i, rid, oldValues[i], newValues[i])
 
     def locate(self, column, value):
         """
@@ -124,16 +136,14 @@ class Index:
         except IndexError:
             raise InvalidIndexError(column_number)
 
-    def update_index(self, column_number, rids, oldValues, newValues):
+    def update_index(self, column_number, rid, oldValue, newValue):
         """
         Update index for the specified column
 
         :param column_number: int
-        :param rids: list of RIDs
-        :param oldValues: list of ints. The ith entry of this list corresponds to the stored value already in
-                         the table for the ith RID (in rids).
-        :param newValues: list of ints. The ith entry of this list corresponds to the updated value that is to be indexed
-                         for the ith RID (in rids).
+        :param rid: rid you are updating
+        :param oldValue: int. The old value of the record at the specified column
+        :param newValue: int. The new value of the record at the specified column
         """
         try:
             if self.indices[column_number] is None:
@@ -142,26 +152,28 @@ class Index:
             raise InvalidColumnError(column_number)
 
         index = self.indices[column_number]
-        # Iterate over the updated RIDs and remove them from the index re-add them in.
-        for rid, oldKey, newKey in zip(rids, oldValues, newValues):
-            index[oldKey].remove(rid)
 
-            if newKey not in index.keys():
-                self.createNewKeyEntry(index, self.seeds[column_number], newKey)
+        # Remove the RID from the index
+        index[oldValue].remove(rid)
 
-            index[newKey][0].append(rid)
+        # If the new value hasn't been indexed by the column index then we want to add it in and insert it
+        # at the correct spot in our linked list.
+        if newValue not in index.keys():
+            self.createNewKeyEntry(index, self.seeds[column_number], newValue)
+
+        index[newValue][0].append(rid)
 
         self.updateMedianSeed(self.seeds[column_number], index.keys())
 
         return True
 
-    def insertIntoIndex(self, column_number, rids, values):
+    def insertIntoIndex(self, column_number, rid, value):
         """
         Insert into the index for the specified column.
 
         :param column_number: int
-        :param rids: list of RIDs. New records that are to be inserted into the index.
-        :param values: list of int. Values for the specified column of the ith record (in rids).
+        :param rid: int. New records that are to be inserted into the index.
+        :param value: int. Values for the specified column of the record
         """
         try:
             if self.indices[column_number] is None:
@@ -170,12 +182,11 @@ class Index:
             raise InvalidColumnError(column_number)
 
         index = self.indices[column_number]
-        for rid, key in zip(rids, values):
 
-            if key not in index.keys():
-                self.createNewKeyEntry(index, self.seeds[column_number], key)
+        if value not in index.keys():
+            self.createNewKeyEntry(index, self.seeds[column_number], value)
 
-            index[key][0].append(rid)
+        index[value][0].append(rid)
 
         self.updateMedianSeed(list(index.keys()))
 
@@ -186,10 +197,9 @@ class Index:
         keys.sort()
         minKey = keys[0]
         maxKey = keys[-1]
-        medianKey = keys[int(len(keys)/2)]
+        medianKey = keys[int(len(keys) / 2)]
 
         self.seeds[column_number] = [minKey, medianKey, maxKey]
-
 
     def createNewKeyEntry(self, index, seeds, key):
 
@@ -222,4 +232,4 @@ class Index:
         seeds[0] = value
 
     def updateMedianSeed(self, seeds, values):
-        seeds[1] = values[int(len(values)/2)]
+        seeds[1] = values[int(len(values) / 2)]
