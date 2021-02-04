@@ -68,7 +68,7 @@ class Table:
         RID = physicalPages.physicalPages[RID_COLUMN].getRecord(locPhyPageIndex)
         timeStamp = physicalPages.physicalPages[TIMESTAMP_COLUMN].getRecord(locPhyPageIndex)
         encoding = physicalPages.physicalPages[SCHEMA_ENCODING_COLUMN].getRecord(locPhyPageIndex)
-        key = physicalPages.physicalPages[KEY_COLUMN].getRecord(locPhyPageIndex)
+        key = physicalPages.physicalPages[self.key + RECORD_COLUMN_OFFSET].getRecord(locPhyPageIndex)
 
         columns = []
 
@@ -180,7 +180,6 @@ class PhysicalPages:
         self.physicalPages[RID_COLUMN].write(RID)
         self.physicalPages[TIMESTAMP_COLUMN].write(record.timestamp)
         self.physicalPages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
-        self.physicalPages[KEY_COLUMN].write(record.key)
 
         for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
             columnData = record.columns[col - RECORD_COLUMN_OFFSET]

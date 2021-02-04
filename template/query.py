@@ -1,4 +1,4 @@
-from template.table import Table, Record
+from template.table import *
 from template.index import Index
 from template.config import *
 
@@ -110,7 +110,7 @@ class Query:
         try:
             for rid in ridRange:
                 record = self.table.getRecord(rid)
-                value = record.columns[aggregate_column_index]
+                value = record.columns[aggregate_column_index - RECORD_COLUMN_OFFSET]
                 sum += value
             return sum
         except:
