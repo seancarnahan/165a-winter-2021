@@ -5,7 +5,7 @@ can be used as well.
 
 Index will be RHash
 """
-from collections import defaultdict, Iterable
+from collections import defaultdict
 from template.config import  *
 
 
@@ -65,9 +65,19 @@ class Index:
             raise InvalidColumnError(column)
 
         matching_rids = []
-        for value in range(begin, end):
-            if isinstance(self.indices[column][value], Iterable):
-                matching_rids.extend(self.indices[column][value])
+        index = self.indices[column]
+
+        currValue = self.seeds[column][0]
+
+        if begin > self.seeds[column][1]:
+            currValue = self.seeds[column][1]
+
+        if begin > self.seeds[column][2]:
+            currValue = self.seeds[column][2]
+
+        while currValue < end:
+            matching_rids.extend(index[currValue][0])
+            currValue = index[currValue][1]
 
         return matching_rids
 
@@ -82,12 +92,23 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column_number)
 
+        index = self.indices[column_number]
+
         for pageRange in self.table.page_directory.pageRanges:
             for basePage in pageRange.basePages:
                 for i in range(basePage.numOfRecords):
                     value = basePage.physicalPages[column_number].getRecord(i)
                     rid = basePage.physicalPages[RID_COLUMN].getRecord(i)
-                    self.indices[column_number][value].append(rid)
+                    index[value].append(rid)
+
+        sortedKeys = list(index)
+
+        for key1, key2 in zip(sortedKeys[:-1], sortedKeys[1:]):
+            index[key1] = [index[key1], key2]
+
+        if len(sortedKeys) != 0:
+            index[sortedKeys[-1]] = [index[sortedKeys[-1]], None]
+            self.createSeeds(column_number)
 
         return
 
@@ -99,6 +120,7 @@ class Index:
         """
         try:
             self.indices[column_number] = None
+            self.seeds[column_number] = None
         except IndexError:
             raise InvalidIndexError(column_number)
 
@@ -119,10 +141,17 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column_number)
 
+        index = self.indices[column_number]
         # Iterate over the updated RIDs and remove them from the index re-add them in.
         for rid, oldKey, newKey in zip(rids, oldValues, newValues):
-            self.indices[column_number][oldKey].remove(rid)
-            self.indices[column_number][newKey].append(rid)
+            index[oldKey].remove(rid)
+
+            if newKey not in index.keys():
+                self.createNewKeyEntry(index, self.seeds[column_number], newKey)
+
+            index[newKey][0].append(rid)
+
+        self.updateMedianSeed(self.seeds[column_number], index.keys())
 
         return True
 
@@ -140,7 +169,57 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column_number)
 
+        index = self.indices[column_number]
         for rid, key in zip(rids, values):
-            self.indices[column_number][key].append(rid)
+
+            if key not in index.keys():
+                self.createNewKeyEntry(index, self.seeds[column_number], key)
+
+            index[key][0].append(rid)
+
+        self.updateMedianSeed(list(index.keys()))
 
         return True
+
+    def createSeeds(self, column_number):
+        keys = list(self.indices[column_number].keys())
+        keys.sort()
+        minKey = keys[0]
+        maxKey = keys[-1]
+        medianKey = keys[int(len(keys)/2)]
+
+        self.seeds[column_number] = [minKey, medianKey, maxKey]
+
+
+    def createNewKeyEntry(self, index, seeds, key):
+
+        if key < seeds[0]:
+            index[key] = [[], seeds[0]]
+            self.updateMinSeed(seeds, key)
+            return
+        elif key > seeds[2]:
+            index[key] = [[], None]
+            index[seeds[2]][1] = key
+            self.updateMaxSeed(seeds, key)
+            return
+
+        if key < seeds[1]:
+            prevKey = seeds[0]
+        else:
+            prevKey = seeds[1]
+
+        while prevKey < key:
+            prevKey = index[prevKey][1]  # find largest key that is < newKey
+
+        nextKey = index[prevKey][1]  # store the key that the newKey should point to
+        index[prevKey][1] = key  # make the prevKey point to the new key
+        index[key] = [[], nextKey]  # make the new key point to the smallest key larger than newKey
+
+    def updateMaxSeed(self, seeds, value):
+        seeds[2] = value
+
+    def updateMinSeed(self, seeds, value):
+        seeds[0] = value
+
+    def updateMedianSeed(self, seeds, values):
+        seeds[1] = values[int(len(values)/2)]
