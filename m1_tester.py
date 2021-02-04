@@ -1,6 +1,6 @@
-from lstore.db import Database
-from lstore.query import Query
-from lstore.config import init
+from template.db import Database
+from template.query import Query
+from template.config import init
 
 from random import choice, randint, sample, seed
 from colorama import Fore, Back, Style
