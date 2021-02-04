@@ -9,6 +9,7 @@ from collections import defaultdict
 from template.config import *
 
 
+
 class InvalidIndexError(Exception):
     def __init__(self, column):
         super().__init__("Column {0} has no index".format(column))
