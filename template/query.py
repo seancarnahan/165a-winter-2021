@@ -1,5 +1,6 @@
 from template.table import Table, Record
 from template.index import Index
+from template.config import *
 
 
 class Query:
@@ -83,7 +84,7 @@ class Query:
     """
     def update(self, key, *columns):
         # rid is the rid of base record
-        # fix syntax below for KEY_COLUMN
+
         rid = self.table.index.locate(KEY_COLUMN, key)
         try:
             self.table.updateRecord(key, rid, *columns)
