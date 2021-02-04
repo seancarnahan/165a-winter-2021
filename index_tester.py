@@ -198,6 +198,7 @@ class IndexTester(unittest.TestCase):
         # just testing if function grabs middle value of the list
         self.assertListEqual([1, 3, 3], self.idx.seeds[RECORD_COLUMN_OFFSET])
 
+
     def test_locate(self):
 
         self.addData()

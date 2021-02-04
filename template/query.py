@@ -63,6 +63,8 @@ class Query:
     def select(self, key, column, query_columns):
         rid = self.table.index.locate(column, key)
         record = self.table.getRecord(rid)
+        if record.encoding == 2:
+            return False
         valueList = []
         counter = 0
         try:
@@ -84,6 +86,9 @@ class Query:
     def update(self, key, *columns):
         # rid is the rid of base record
         rid = self.table.index.locate(RECORD_COLUMN_OFFSET, key)
+        record = self.table.getRecord(rid)
+        if record.encoding == 2:
+            return False
         try:
             self.table.updateRecord(key, rid, *columns)
             return True
