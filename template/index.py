@@ -34,12 +34,12 @@ class Index:
         self.table = table
 
     def insert(self, rid, values):
-        for i in len(self.indices):
+        for i in range(len(self.indices)):
             if self.indices[i] is not None:
                 self.insertIntoIndex(i, rid, values[i])
 
     def updateIndexes(self, rid, oldValues, newValues):
-        for i in len(self.indices):
+        for i in range(len(self.indices)):
             if self.indices[i] is not None:
                 if oldValues[i] != newValues[i]:
                     self.update_index(i, rid, oldValues[i], newValues[i])
