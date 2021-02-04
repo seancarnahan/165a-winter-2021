@@ -21,7 +21,7 @@ class Page:
     #output: if page still has room return true, else return false
     #adds an integer to a page 
     def write(self, value):
-        if self.has_capacity:
+        if self.has_capacity():
             byteArray = Page().integerToBytes(value)
 
             self.data += byteArray
@@ -44,14 +44,15 @@ class Page:
     #input: the index of the record to replace, new integer value
     #output: void
     def replaceRecord(self, index, newIntVal):
+
+        if index > self.num_records:
+            return False
+
         x1, x2 = Page().getRecordIndexes(index)
         byteArray = Page().integerToBytes(newIntVal)
+        self.data[x1: x2] = byteArray
+        return True
 
-        try:
-            self.data[x1: x2] = byteArray
-            return True
-        except IndexError:
-            return False
 
     #input: record index to remove,
     #output: return true if removal was successful, false otherwise
