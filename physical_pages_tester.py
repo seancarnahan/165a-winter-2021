@@ -9,15 +9,15 @@ import unittest
 class PhysicalPagesTest(unittest.TestCase):
 
     def setUp(self):
-        self.numColumns = 4
+        self.numColumns = 4 + RECORD_COLUMN_OFFSET
         self.fakeData = []
-        for i in range(self.numColumns):
+        for i in range(4):
             self.fakeData.append(i)
         self.physicalPages = PhysicalPages(self.numColumns)
 
     def test_init(self):
         self.assertEqual(self.physicalPages.numOfRecords, 0)
-        self.assertEqual(len(self.physicalPages.physicalPages), self.numColumns+RECORD_COLUMN_OFFSET)
+        self.assertEqual(len(self.physicalPages.physicalPages), self.numColumns)
         for item in self.physicalPages.physicalPages:
             self.assertIsInstance(item, Page)
 
