@@ -59,7 +59,10 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column+RECORD_COLUMN_OFFSET)
 
-        return self.indices[column+RECORD_COLUMN_OFFSET][value]
+        if value not in self.indices[column+RECORD_COLUMN_OFFSET].keys():
+            return []
+
+        return self.indices[column+RECORD_COLUMN_OFFSET][value][0]
 
     def locate_range(self, begin, end, column):
         """
@@ -71,23 +74,23 @@ class Index:
         :returns: A list of RIDs that have a value that falls between [begin,end] in column "column".
         """
         try:
-            if self.indices[column] is None:
+            if self.indices[column+RECORD_COLUMN_OFFSET] is None:
                 raise InvalidIndexError(column)
         except IndexError:
             raise InvalidColumnError(column)
 
         matching_rids = []
-        index = self.indices[column]
+        index = self.indices[column+RECORD_COLUMN_OFFSET]
 
-        currValue = self.seeds[column][0]
+        currValue = self.seeds[column+RECORD_COLUMN_OFFSET][0]
 
-        if begin > self.seeds[column][1]:
-            currValue = self.seeds[column][1]
+        if begin > self.seeds[column+RECORD_COLUMN_OFFSET][1]:
+            currValue = self.seeds[column+RECORD_COLUMN_OFFSET][1]
 
-        if begin > self.seeds[column][2]:
-            currValue = self.seeds[column][2]
+        if begin > self.seeds[column+RECORD_COLUMN_OFFSET][2]:
+            currValue = self.seeds[column+RECORD_COLUMN_OFFSET][2]
 
-        while currValue < end:
+        while currValue <= end:
             matching_rids.extend(index[currValue][0])
             currValue = index[currValue][1]
 

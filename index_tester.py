@@ -198,6 +198,30 @@ class IndexTester(unittest.TestCase):
         # just testing if function grabs middle value of the list
         self.assertListEqual([1, 3, 3], self.idx.seeds[RECORD_COLUMN_OFFSET])
 
+    def test_locate(self):
+
+        self.addData()
+        key = 0
+
+        for rid, data in zip(self.rids, self.data):
+            value = data[0]
+            retrieved_rids = self.idx.locate(key, value)
+            self.assertIn(rid, retrieved_rids)
+
+        self.assertListEqual([], self.idx.locate(key, -1))
+
+    def test_locate_range(self):
+        self.addData()
+
+        begin = 0
+        end = 200
+        key = 0
+
+        ridsInRange = self.rids[0:201]
+        retrieved_rids = self.idx.locate_range(begin, end, key)
+
+        for rid in retrieved_rids:
+            self.assertIn(rid, ridsInRange)
 
 
 
