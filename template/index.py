@@ -34,12 +34,12 @@ class Index:
         self.table = table
 
     def insert(self, rid, values):
-        for i in len(self.indices):
+        for i in range(len(self.indices)):
             if self.indices[i] is not None:
-                self.insertIntoIndex(i, rid, values[i])
+                self.insertIntoIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
 
     def updateIndexes(self, rid, oldValues, newValues):
-        for i in len(self.indices):
+        for i in range(len(self.indices)):
             if self.indices[i] is not None:
                 if oldValues[i] != newValues[i]:
                     self.update_index(i, rid, oldValues[i], newValues[i])
@@ -54,12 +54,12 @@ class Index:
         """
 
         try:
-            if self.indices[column] is None:
-                raise InvalidIndexError(column)
+            if self.indices[column+RECORD_COLUMN_OFFSET] is None:
+                raise InvalidIndexError(column+RECORD_COLUMN_OFFSET)
         except IndexError:
-            raise InvalidColumnError(column)
+            raise InvalidColumnError(column+RECORD_COLUMN_OFFSET)
 
-        return self.indices[column][value]
+        return self.indices[column+RECORD_COLUMN_OFFSET][value]
 
     def locate_range(self, begin, end, column):
         """
@@ -122,7 +122,7 @@ class Index:
             index[sortedKeys[-1]] = [index[sortedKeys[-1]], None]
             self.createSeeds(column_number)
 
-        return
+        return True
 
     def drop_index(self, column_number):
         """
@@ -133,6 +133,7 @@ class Index:
         try:
             self.indices[column_number] = None
             self.seeds[column_number] = None
+            return True
         except IndexError:
             raise InvalidIndexError(column_number)
 
@@ -151,19 +152,25 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column_number)
 
+        self.removeFromIndex(column_number, rid, oldValue)
+        self.insertIntoIndex(column_number, rid, newValue)
+
+        return True
+
+    def removeFromIndex(self, column_number, rid, value):
+        try:
+            if self.indices[column_number] is None:
+                raise InvalidIndexError(column_number)
+        except IndexError:
+            raise InvalidColumnError(column_number)
+
         index = self.indices[column_number]
 
-        # Remove the RID from the index
-        index[oldValue].remove(rid)
+        if value in index.keys():
+            index[value][0].remove(rid)
 
-        # If the new value hasn't been indexed by the column index then we want to add it in and insert it
-        # at the correct spot in our linked list.
-        if newValue not in index.keys():
-            self.createNewKeyEntry(index, self.seeds[column_number], newValue)
-
-        index[newValue][0].append(rid)
-
-        self.updateMedianSeed(self.seeds[column_number], index.keys())
+            if len(index[value][0]) == 0:
+                del index[value]
 
         return True
 
@@ -184,11 +191,11 @@ class Index:
         index = self.indices[column_number]
 
         if value not in index.keys():
-            self.createNewKeyEntry(index, self.seeds[column_number], value)
+            self.createNewKeyEntry(index, column_number, value)
 
         index[value][0].append(rid)
 
-        self.updateMedianSeed(list(index.keys()))
+        self.updateMedianSeed(column_number, list(index.keys()))
 
         return True
 
@@ -201,16 +208,24 @@ class Index:
 
         self.seeds[column_number] = [minKey, medianKey, maxKey]
 
-    def createNewKeyEntry(self, index, seeds, key):
+    def createNewKeyEntry(self, index, column, key):
+
+        index[key] = [[], None]
+
+        if self.seeds[column] is None or len(index.keys()) == 1:
+            # there are no seeds generated so this is the first key in index. Make all seeds into this value.
+            self.seeds[column] = [key,key,key]
+
+        seeds = self.seeds[column]
 
         if key < seeds[0]:
             index[key] = [[], seeds[0]]
-            self.updateMinSeed(seeds, key)
+            self.updateMinSeed(column, key)
             return
         elif key > seeds[2]:
             index[key] = [[], None]
             index[seeds[2]][1] = key
-            self.updateMaxSeed(seeds, key)
+            self.updateMaxSeed(column, key)
             return
 
         if key < seeds[1]:
@@ -225,11 +240,11 @@ class Index:
         index[prevKey][1] = key  # make the prevKey point to the new key
         index[key] = [[], nextKey]  # make the new key point to the smallest key larger than newKey
 
-    def updateMaxSeed(self, seeds, value):
-        seeds[2] = value
+    def updateMaxSeed(self, column, value):
+        self.seeds[column][2] = value
 
-    def updateMinSeed(self, seeds, value):
-        seeds[0] = value
+    def updateMinSeed(self, column, value):
+        self.seeds[column][0] = value
 
-    def updateMedianSeed(self, seeds, values):
-        seeds[1] = values[int(len(values) / 2)]
+    def updateMedianSeed(self, column, values):
+        self.seeds[column][1] = values[int(len(values) / 2)]
