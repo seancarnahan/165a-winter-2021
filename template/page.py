@@ -52,24 +52,6 @@ class Page:
         byteArray = Page().integerToBytes(newIntVal)
         self.data[x1: x2] = byteArray
         return True
-
-
-    #input: record index to remove,
-    #output: return true if removal was successful, false otherwise
-    def removeRecord(self, index):
-        x1, x2 = Page().getRecordIndexes(index)
-        
-        #TODO: del doesnt throw index error, need to remove outer if block
-        if self.getRecord(index) != False:
-            try:
-                del self.data[x1: x2]
-                self.num_records -= 1
-
-                return True
-            except IndexError:
-                return False
-        else:
-            return False
         
     #input: index from 0 - 999
     #output: a list [x1,x2] (inclusive,exclusive)
