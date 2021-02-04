@@ -33,7 +33,7 @@ class TestTableFunctionality(unittest.TestCase):
         self.assertEqual(record.indirection, 0)
         # self.assertEqual(record.timestamp, 100000000)
         self.assertEqual(record.encoding, 0)
-        self.assertEqual(record.columns, [5, 6, 7, 8, 9])
+        self.assertEqual(record.columns, [123456, 6, 7, 8, 9])
         self.assertEqual(record.RID, 100000000)
 
     def test_table_createNewRecord(self):
