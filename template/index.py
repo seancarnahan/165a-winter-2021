@@ -6,7 +6,6 @@ can be used as well.
 Index will be RHash
 """
 from collections import defaultdict
-from statistics import median_low
 from template.config import  *
 
 
@@ -107,9 +106,10 @@ class Index:
         for key1, key2 in zip(sortedKeys[:-1], sortedKeys[1:]):
             index[key1] = [index[key1], key2]
 
-        index[sortedKeys[-1]] = [index[sortedKeys[-1]], None]
+        if len(sortedKeys) != 0:
+            index[sortedKeys[-1]] = [index[sortedKeys[-1]], None]
+            self.createSeeds(column_number)
 
-        self.createSeeds(column_number)
         return
 
     def drop_index(self, column_number):
@@ -177,16 +177,16 @@ class Index:
 
             index[key][0].append(rid)
 
-        self.updateMedianSeed(index.keys())
+        self.updateMedianSeed(list(index.keys()))
 
         return True
 
     def createSeeds(self, column_number):
-        keys = self.indices[column_number].keys()
-
-        minKey = min(keys)
-        maxKey = max(keys)
-        medianKey = median_low(keys)
+        keys = list(self.indices[column_number].keys())
+        keys.sort()
+        minKey = keys[0]
+        maxKey = keys[-1]
+        medianKey = keys[int(len(keys)/2)]
 
         self.seeds[column_number] = [minKey, medianKey, maxKey]
 
@@ -222,4 +222,4 @@ class Index:
         seeds[0] = value
 
     def updateMedianSeed(self, seeds, values):
-        seeds[1] = median_low(values)
+        seeds[1] = values[int(len(values)/2)]
