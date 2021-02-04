@@ -6,7 +6,6 @@ from template.table import *
 from template.index import Index
 from template.config import *
 
-
 class TestTableFunctionality(unittest.TestCase):
     def setUp(self):
         self.name = "grades"
@@ -71,7 +70,6 @@ class TestTableFunctionality(unittest.TestCase):
                 self.assertEqual(len(physicalPages.physicalPages), RECORD_COLUMN_OFFSET + len(values))
 
         #spot check random ids-------------------------- will only work for the 5 column format
-        
         #record: 500 -> 1 00 00 0499
         record = self.table.getRecord(100000499)
         RID = record.RID
@@ -137,7 +135,28 @@ class TestTableFunctionality(unittest.TestCase):
 
 
     def test_table_updateRecord(self):
-        pass
+        self.table.updateRecord(1234, 100000000, [None, None, None, None, 906659671])
+        
+        updatedBaseRecord = self.table.getRecord(100000000)
+        self.assertEqual(updatedBaseRecord.encoding, 1)
+        self.assertNotEquals(updatedBaseRecord.indirection, 0)
+
+        expectedValues = self.table.getUpdatedRow(updatedBaseRecord.columns, [None, None, None, None, 906659671])
+
+        updateTailRID = updatedBaseRecord.indirection
+        tailRecord = self.table.getRecord(updateTailRID)
+
+        self.assertEqual(tailRecord.columns, expectedValues)
+
+    def test_table_getUpdatedRow(self):
+        currValues = [1,2,3,4,5]
+        updateRequest = [10, None, None, 100000000, None]
+        expected = [10,2,3,100000000,5]
+
+        updatedResponse = self.table.getUpdatedRow(currValues,updateRequest)
+
+        self.assertEqual(expected, updatedResponse)
+
 
 if __name__ == "__main__":
     unittest.main()
