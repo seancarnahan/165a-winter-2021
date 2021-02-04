@@ -22,12 +22,18 @@ class Query:
     invalidated by setting the RID of itself and all its tail records to a special value
     """
     def delete(self, key):
-        #RID is for the base record
-        #schema encoding = 2 for delete
-        #add a new record to tail page
+        # RID is for the base record
+        # schema encoding = 2 for delete
+        # add a new record to tail page
+        # fix syntax below for KEY_COLUMN
+        rid = self.table.index.locate(KEY_COLUMN, key)
+        values = []
+        for value in range(table.num_columns):
+            values.append(0)
         try:
-            values = '0' * self.table.num_columns
-            updateRecord(key, RID, values)
+            self.table.updateRecord(key, rid, values)
+            record = self.table.getRecord(rid)
+            record.encoding = 2
             return True
         except:
             return False
@@ -56,11 +62,7 @@ class Query:
     """
     def select(self, key, column, query_columns):
         rid = self.table.index.locate(column, key)
-        recordLoc = self.table.page_directory.getRecordLocation(rid)
-        record = self.table.page_directory.getPhysicalPages(recordLoc[0],
-                                                            recordLoc[1],
-                                                            recordLoc[2],
-                                                            recordLoc[3])
+        record = self.table.getRecord(rid)
         valueList = []
         counter = 0
         try:
@@ -80,8 +82,9 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
     def update(self, key, *columns):
-        #rid is the rid of base record
-        rid = self.table.index.locate(*columns, key)
+        # rid is the rid of base record
+        # fix syntax below for KEY_COLUMN
+        rid = self.table.index.locate(KEY_COLUMN, key)
         try:
             self.table.updateRecord(key, rid, *columns)
             return True
@@ -102,9 +105,7 @@ class Query:
         sum = 0
         try:
             for rid in ridRange:
-                recordLoc = self.table.page_directory.getRecordLocation(rid)
-                record = self.table.page_directory.getPhysicalPages(
-                    recordLoc[0], recordLoc[1], recordLoc[2], recordLoc[3])
+                record = self.table.getRecord(rid)
                 value = record.columns[aggregate_column_index]
                 sum += value
             return sum
