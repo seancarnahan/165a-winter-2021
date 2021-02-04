@@ -27,9 +27,9 @@ class Query:
         # schema encoding = 2 for delete
         # add a new record to tail page
         # fix syntax below for KEY_COLUMN
-        rid = self.table.index.locate(KEY_COLUMN, key)
+        rid = self.table.index.locate(RECORD_COLUMN_OFFSET, key)
         values = []
-        for value in range(table.num_columns):
+        for value in range(self.table.num_columns):
             values.append(0)
         try:
             self.table.updateRecord(key, rid, values)
@@ -47,8 +47,7 @@ class Query:
     """
     def insert(self, *columns):
         try:
-            key = self.table.key
-            self.table.createNewRecord(key, *columns)
+            self.table.createNewRecord(columns[0], *columns)
             return True
         except:
             return False
@@ -84,8 +83,7 @@ class Query:
     """
     def update(self, key, *columns):
         # rid is the rid of base record
-
-        rid = self.table.index.locate(KEY_COLUMN, key)
+        rid = self.table.index.locate(RECORD_COLUMN_OFFSET, key)
         try:
             self.table.updateRecord(key, rid, *columns)
             return True
