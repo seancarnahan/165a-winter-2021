@@ -1,186 +1,82 @@
+import unittest
+
+from template.config import PAGE_SIZE, PAGE_RECORD_SIZE
 from template.page import Page
-
-#TODO: learn python unittesting framework, to make this more concise, im aware this looks awful lol
-#TEST: page : has_capacity function
-def test_has_capacity():
-    page = Page()
-
-    for i in range(999):
-        page.write(i)
-
-    if page.has_capacity() == True:
-        pass
-    else:
-        print("Error in [test_has_capacity]: 1")
-        return False
-
-    page.num_records = 1000
-
-    if page.has_capacity() == False:
-        pass
-    else:
-        print("Error in [test_has_capacity]: 2")
-        return False
-
-    page.num_records = 999
-
-    if page.has_capacity() == True:
-        return True
-    else:
-        print("Error in [test_has_capacity]: 3")
-        return False
-
-#TEST: page : write function
-def test_write():
-    page = Page()
-
-    for i in range(1000):
-        page.write(i)
-
-    if page.num_records == 1000:
-        pass
-    else:
-        print("Error in [test_write]: 1")
-        return False
-
-    if len(page.data) == 4000:
-        return True
-    else:
-        print("Error in [test_write]: 2")
-        return False
-
-#TEST: page : getRecord function
-def test_getRecord():
-    page = Page()
-
-    for i in range(1000):
-        page.write(i)
-    
-    if page.getRecord(1) == 1:
-        pass
-    else:
-        print("Error in [test_getRecord]: 1")
-        return False
-
-    if page.getRecord(999) == 999:
-        pass
-    else:
-        print("Error in [test_getRecord]: 2")
-        return False
-
-    if page.getRecord(1000) == False:
-        return True
-    else:
-        print("Error in [test_getRecord]: 3")
-        return False
-    
-
-#TEST: page : replaceRecord function
-def test_replaceRecord():
-    page = Page()
-
-    for i in range(1000):
-        page.write(i)
-
-    if page.replaceRecord(2, 100000) == True:
-        pass
-    else:
-        print("Error in [test_replaceRecord]: 1")
-        return False
-
-    if page.getRecord(2) == 100000:
-        pass
-    else:
-        print("Error in [test_replaceRecord]: 2")
-        return False
-
-    if page.getRecord(1000) == False:
-        return True
-    else:
-        print("Error in [test_replaceRecord]: 3")
-        return False
+from unittest.mock import patch
 
 
-#TEST: page : removeRecord function
-def test_removeRecord():
-    page = Page()
+class PageTester(unittest.TestCase):
 
-    for i in range(1000):
-        page.write(i)
-    
-    if page.removeRecord(2) == True:
-        pass
-    else:
-        print("Error in [test_removeRecord]: 1")
-        return False
+    def setUp(self):
+        self.testPage = Page()
 
-    if page.getRecord(2) == 3:
-        pass
-    else:
-        print("Error in [test_removeRecord]: 2")
-        return False
+    def test_init(self):
+        self.assertEqual(self.testPage.num_records, 0)
+        self.assertIsInstance(self.testPage.data, bytearray)
 
-    if page.removeRecord(1000) == False:
-        pass
-    else:
-        print("Error in [test_removeRecord]: 3")
-        return False
+    def test_hasCapacity(self):
+        self.assertTrue(self.testPage.has_capacity())
+        self.testPage.num_records = PAGE_SIZE
+        self.assertFalse(self.testPage.has_capacity())
 
-    if page.num_records == 999:
-        return True
-    else:
-        print("Error in [test_removeRecord]: 4")
-        return False
+    @patch('template.page.Page.has_capacity', return_value=True)
+    def test_write(self, mockHasCapacity):
+        self.assertTrue(self.testPage.write(12345))
+        self.assertEqual(self.testPage.num_records, 1)
+        self.assertEqual(len(self.testPage.data), 4)
 
-#TEST: page : getRecordIndexes function
-def test_getRecordIndexes():
-    x1, x2 = Page().getRecordIndexes(3)
+        for i in range(50):
+            self.assertTrue(self.testPage.write(i))
 
-    if x1 == 12 and x2 == 16:
-        return True
-    else:
-        print("Error in [test_getRecordIndexes]: 1")
-        return False
+        self.assertEqual(self.testPage.num_records, 51)
+        self.assertEqual(len(self.testPage.data), 4 * 51)
 
-#TEST: page : integerToBytes function
-def test_integerToBytes():
-    expectedVal = b'6\n\x87W'
-    val = Page().integerToBytes(906659671)
+    @patch('template.page.Page.has_capacity', return_value=False)
+    def test_write2(self, mockHasCapacity):
+        self.assertFalse(self.testPage.write(12345))
+        self.assertEqual(self.testPage.num_records, 0)
+        self.assertEqual(len(self.testPage.data), 0)
 
-    if val == expectedVal:
-        return True
-    else:
-        print("Error in [test_integerToBytes]: 1")
-        return False
+    def test_getRecord(self):
+        self.testPage.data += b'\x00\x00\x00\x05'
+        self.assertEqual(self.testPage.getRecord(0), 5)
 
-#TEST: page : bytesToHex function
-def test_bytesToHex():
-    
-    expectedVal = "360a8757"
-    val = Page().bytesToHex(Page().integerToBytes(906659671))
+        self.assertFalse(self.testPage.getRecord(5))
 
-    if val == expectedVal:
-        return True
-    else:
-        print("Error in [test_bytesToHex]: 1")
-        return False
+    def test_replaceRecord(self):
+        self.testPage.data += b'\x00\x00\x00\x05'
+        self.assertTrue(self.testPage.replaceRecord(0, 10))
+        self.assertEqual(self.testPage.data[0:4], b'\x00\x00\x00\x0a')
+        self.assertFalse(self.testPage.replaceRecord(4, 10))
 
-#TEST: page : hexToInt function
-def test_hexToInt():
-    expectedVal = 906659671
-    val = Page().hexToInt(Page().bytesToHex(Page().integerToBytes(906659671)))
+    def test_getRecordIndexes(self):
+        for i in range(100):
+            expectedIndex = [PAGE_RECORD_SIZE * i, PAGE_RECORD_SIZE * (i + 1)]
+            self.assertEqual(Page.getRecordIndexes(i), expectedIndex)
 
-    if val == expectedVal:
-        return True
-    else:
-        print("Error in [test_hexToInt]: 1")
-        return False
+    def test_integerToBytes(self):
+        integers = [10, 11, 13, 15, 16, 17]
+        expectedBytes = [b'\x00\x00\x00\x0a', b'\x00\x00\x00\x0b', b'\x00\x00\x00\x0d', b'\x00\x00\x00\x0f',
+                         b'\x00\x00\x00\x10', b'\x00\x00\x00\x11']
 
-def main():
-    if test_has_capacity() and test_write() and test_getRecord() and test_replaceRecord() and test_removeRecord() and test_getRecordIndexes() and test_integerToBytes() and test_bytesToHex() and test_hexToInt():
-        print("ALL tests in [page_tester.py] pass successful") 
-    else:
-        print("There is at least 1 failing test")
+        for integer, expectedByte in zip(integers, expectedBytes):
+            self.assertEqual(Page.integerToBytes(integer), expectedByte)
+
+    def test_bytesToHex(self):
+        bytes = [b'\x00\x00\x00\x0a', b'\x00\x00\x00\x0b', b'\x00\x00\x00\x0d', b'\x00\x00\x00\x0f',
+                 b'\x00\x00\x00\x10', b'\x00\x00\x00\x11']
+        expectedHexs = ['0000000a', '0000000b', '0000000d', '0000000f', '00000010', '00000011']
+
+        for testByte, expectedHex in zip(bytes, expectedHexs):
+            self.assertEqual(Page.bytesToHex(testByte), expectedHex)
+
+    def test_hexToInt(self):
+        hexVals = ['0000000a', '0000000b', '0000000d', '0000000f', '00000010', '00000011']
+        expectedVals = [10, 11, 13, 15, 16, 17]
+
+        for hexVal, expectedVal in zip(hexVals, expectedVals):
+            self.assertEqual(Page.hexToInt(hexVal), expectedVal)
+
 
 if __name__ == "__main__":
-    main()
+    unittest.main()
