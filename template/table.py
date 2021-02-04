@@ -47,7 +47,7 @@ class Table:
         self.num_columns = num_columns + RECORD_COLUMN_OFFSET
         self.page_directory = PageDirectory(self.num_columns)
         self.index = Index(self)
-
+        self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
 
         self.currPageRangeIndex = 0
@@ -75,7 +75,7 @@ class Table:
         for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
             columns.append(physicalPages.physicalPages[i].getRecord(locPhyPageIndex))
 
-        record =  Record(key, indirection, timeStamp, encoding, columns)
+        record = Record(key, indirection, timeStamp, encoding, columns)
         record.RID = RID
 
         return record
@@ -96,6 +96,8 @@ class Table:
         #insert a new record -> all the checks for capacity are done implicitly
         self.page_directory.insertBaseRecord(record)
 
+        self.index.insert(record.RID, columns)
+
     #input: values: values of columns to be inserted; excluding the metadata
     #input: RID: the RID of the base Record you would like to provide an update for
     def updateRecord(self, key, RID, values):
@@ -106,6 +108,7 @@ class Table:
 
         if baseRecord.indirection == 0:
             #base Record has not been updated
+
             updatedValues = self.getUpdatedRow(baseRecord.columns, values)
         else:
             #base Record has been updated
@@ -113,6 +116,7 @@ class Table:
 
             updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
 
+        self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
         #step 2: add tail page and return RID
 
         #create New tail Record
