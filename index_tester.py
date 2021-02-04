@@ -222,18 +222,26 @@ class IndexTester(unittest.TestCase):
 
         for rid in retrieved_rids:
             self.assertIn(rid, ridsInRange)
+            ridsInRange.remove(rid)
+
+        self.assertListEqual([], ridsInRange)
 
 
+        begin = -100
+        end = -1
 
+        ridsInRange = []
+        retrieved_rids = self.idx.locate_range(begin, end, key)
 
+        self.assertListEqual(ridsInRange, retrieved_rids)
 
+        begin = len(self.data) + 100
+        end = begin + 200
 
+        ridsInRange = []
+        retrieved_rids = self.idx.locate_range(begin, end, key)
 
-
-
-
-
-
+        self.assertListEqual(ridsInRange, retrieved_rids)
 
 
 if __name__ == '__main__':

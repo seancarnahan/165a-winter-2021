@@ -80,19 +80,23 @@ class Index:
             raise InvalidColumnError(column)
 
         matching_rids = []
+
+        if begin < self.seeds[column+RECORD_COLUMN_OFFSET][0] or begin > self.seeds[column+RECORD_COLUMN_OFFSET][2]:
+            return matching_rids
+
         index = self.indices[column+RECORD_COLUMN_OFFSET]
 
-        currValue = self.seeds[column+RECORD_COLUMN_OFFSET][0]
+        currKey = self.seeds[column+RECORD_COLUMN_OFFSET][0] # set currKey to minKey
 
-        if begin > self.seeds[column+RECORD_COLUMN_OFFSET][1]:
-            currValue = self.seeds[column+RECORD_COLUMN_OFFSET][1]
+        if begin > self.seeds[column+RECORD_COLUMN_OFFSET][1]: # if begin > medianKey, skip everything before medianKey
+            currKey = self.seeds[column+RECORD_COLUMN_OFFSET][1]
 
-        if begin > self.seeds[column+RECORD_COLUMN_OFFSET][2]:
-            currValue = self.seeds[column+RECORD_COLUMN_OFFSET][2]
+        if begin == self.seeds[column+RECORD_COLUMN_OFFSET][2]: # if begin = maxKey, make currKey maxKey
+            currKey = self.seeds[column+RECORD_COLUMN_OFFSET][2]
 
-        while currValue <= end:
-            matching_rids.extend(index[currValue][0])
-            currValue = index[currValue][1]
+        while currKey <= end:
+            matching_rids.extend(index[currKey][0])
+            currKey = index[currKey][1]
 
         return matching_rids
 
