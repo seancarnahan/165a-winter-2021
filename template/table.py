@@ -12,7 +12,7 @@ class Record:
         self.key = key
 
         #an RID if this is an update
-        #set to NULL or NONE if this is the BASE record
+        #set to 0 if this is the BASE record
         self.indirection = indirection
 
         #integer (based on milliseconds from epoch)
@@ -24,12 +24,15 @@ class Record:
         #list corresponding to all of the user created columns
         self.columns = columns
 
+        #must call getNewRID for this to be added
+        self.RID = None
+
     #input: record location
     #output: record location in integer form; #example: 123456789
-    
     def getNewRID(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
-        num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex(10**4) + locPhyPageIndex
-        return num
+        num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex*(10**4) + locPhyPageIndex
+
+        return num        
 
 class Table:
 
@@ -42,13 +45,41 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(num_columns)
+        self.page_directory = PageDirectory(self.num_columns)
         self.index = Index(self)
 
         self.latestRID = None
 
         self.currPageRangeIndex = 0
-        #self.currPageIndex = 0
+    
+    #Input: RID
+    #Output: Record Object with RID added
+    def getRecord(self, RID):
+        locType, locPRIndex, lock_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
+        pageRange = self.page_directory.pageRanges[locPRIndex]
+
+        physicalPages = None
+        if locType == 1:
+            physicalPages = pageRange.basePages[lock_PIndex]
+        elif locType == 2:
+            physicalPages = pageRange.tailPages[lock_PIndex]
+
+        indirection = physicalPages.physicalPages[INDIRECTION_COLUMN].getRecord(locPhyPageIndex)
+        RID = physicalPages.physicalPages[RID_COLUMN].getRecord(locPhyPageIndex)
+        timeStamp = physicalPages.physicalPages[TIMESTAMP_COLUMN].getRecord(locPhyPageIndex)
+        encoding = physicalPages.physicalPages[SCHEMA_ENCODING_COLUMN].getRecord(locPhyPageIndex)
+        key = physicalPages.physicalPages[KEY_COLUMN].getRecord(locPhyPageIndex)
+
+        columns = []
+
+        for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
+            columns.append(physicalPages.physicalPages[i].getRecord(locPhyPageIndex))
+
+        record =  Record(key, indirection, timeStamp, encoding, columns)
+        record.RID = RID
+
+        return record
+        
 
     #INSERT -> only created new BASE Records
     #input: values: values of columns to be inserted; excluding the metadata
@@ -67,32 +98,57 @@ class Table:
 
     #input: values: values of columns to be inserted; excluding the metadata
     #input: RID: the RID of the base Record you would like to provide an update for
-    #  Given an RID of the record you would like to update
-    #     - 1. first add the tail page to the correct Page Range and return the RID of the new tail page
-    #     - 2. next go into the base page and change encoding to 1, and then change indirection to the new RID
-    #     - note its up to the query to get the most updated values and combine them with the new values and the call updateRecord()
     def updateRecord(self, key, RID, values):
+        #Step 1: get the updated Values
+        baseRecord = self.getRecord(RID)
+        prevUpdateRecord = None
+        updatedValues = None
 
-        #step 1: add tail page and return RID
+        if baseRecord.indirection == 0:
+            #base Record has not been updated
+            updatedValues = self.getUpdatedRow(baseRecord.columns, values)
+        else:
+            #base Record has been updated
+            prevUpdateRecord = self.getRecord(baseRecord.indirection)
 
-        #create tail Record
+            updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
+
+        #step 2: add tail page and return RID
+
+        #create New tail Record
         indirection = 0
         timeStamp = self.getNewTimeStamp()
         encoding = 0
-        record = Record(key, indirection, timeStamp, encoding, values)
+        record = Record(key, indirection, timeStamp, encoding, updatedValues)
 
         #add the record and get the RID
         tailRecordRID = self.page_directory.insertTailRecord(RID, record)
 
-        #Step 2: update base page page with location of new tail record
+        #step 3: if there is a prevTail, then set the prev tail record to point to the new tail record
+        if baseRecord.indirection != 0:
+            locType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(prevUpdateRecord.RID)
+            prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locTPIndex, locPhyPageIndex).physicalPages
+            prevTailRecordPhysicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
+            prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].write(1)
+
+        #Step 4: update base page with location of new tail record
         locType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
-        physicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex)
+        basePagePhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
+        basePagePhysicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
+        basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].write(1)
 
-        #set base page encoding to 1
-        currEncoding = 1
+    #input currValues and update should both be lists of integers of equal lengths
+    #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
+    def getUpdatedRow(self, currValues, update):
+        updatedValues = []
 
-        #set base page indirection to newly created tail page
-        currIndirection = physicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
+        for i in range(len(currValues)):
+            if update[i] == None:
+                updatedValues.append(currValues[i])
+            else:
+                updatedValues.append(update[i])
+
+        return updatedValues
 
     def getNewTimeStamp(self):
         return int(time())
@@ -103,14 +159,14 @@ class PhysicalPages:
         self.physicalPages = []
         self.numOfRecords = 0
 
-        for _ in range(num_columns+RECORD_COLUMN_OFFSET):
+        for _ in range(num_columns):
             self.physicalPages.append(Page())
 
     # record location = [locType, locPRIndex, locBPIndex or locTPIndex]
     #returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation):
         #set last item of recordLocation
-        locPhyPageIndex = self.numOfRecords - 1
+        locPhyPageIndex = self.numOfRecords 
         recordLocation.append(locPhyPageIndex)
 
         #create New RID with record Location
@@ -120,6 +176,7 @@ class PhysicalPages:
         self.physicalPages[RID_COLUMN].write(RID)
         self.physicalPages[TIMESTAMP_COLUMN].write(record.timestamp)
         self.physicalPages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+        self.physicalPages[KEY_COLUMN].write(record.key)
 
         for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
             columnData = record.columns[col - RECORD_COLUMN_OFFSET]
@@ -171,6 +228,7 @@ class PageRange:
                 recordLocation.append(locBPIndex)
 
                 #write to the pages
+                currBasePage = self.basePages[self.currBasePageIndex]
                 currBasePage.setPageRecord(record, recordLocation)
                 return True #succesfully inserted a new record into Page Rage
             else:
@@ -306,5 +364,7 @@ class PageDirectory:
         RID //=100
         locPRIndex = RID % 100
         RID //= 100
+
+        #RID => locType
         return [RID, locPRIndex, lock_PIndex, locPhyPageIndex]
         
