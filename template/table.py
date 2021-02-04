@@ -12,7 +12,7 @@ class Record:
         self.key = key
 
         #an RID if this is an update
-        #set to NULL or NONE if this is the BASE record
+        #set to 0 if this is the BASE record
         self.indirection = indirection
 
         #integer (based on milliseconds from epoch)
@@ -24,12 +24,15 @@ class Record:
         #list corresponding to all of the user created columns
         self.columns = columns
 
+        #must call getNewRID for this to be added
+        self.RID = None
+
     #input: record location
     #output: record location in integer form; #example: 123456789
-    
     def getNewRID(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
-        num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex(10**4) + locPhyPageIndex
-        return num
+        num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex*(10**4) + locPhyPageIndex
+
+        return num        
 
 class Table:
 
@@ -42,13 +45,41 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(num_columns)
+        self.page_directory = PageDirectory(self.num_columns)
         self.index = Index(self)
 
         self.latestRID = None
 
         self.currPageRangeIndex = 0
-        #self.currPageIndex = 0
+    
+    #Input: Record Object
+    #Output: Record Object with RID added
+    def getRecord(self, RID):
+        locType, locPRIndex, lock_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
+        pageRange = self.page_directory.pageRanges[locPRIndex]
+
+        physicalPages = None
+        if locType == 1:
+            physicalPages = pageRange.basePages[lock_PIndex]
+        elif locType == 2:
+            physicalPages = pageRange.tailPages[lock_PIndex]
+
+        indirection = physicalPages.physicalPages[INDIRECTION_COLUMN].getRecord(locPhyPageIndex)
+        RID = physicalPages.physicalPages[RID_COLUMN].getRecord(locPhyPageIndex)
+        timeStamp = physicalPages.physicalPages[TIMESTAMP_COLUMN].getRecord(locPhyPageIndex)
+        encoding = physicalPages.physicalPages[SCHEMA_ENCODING_COLUMN].getRecord(locPhyPageIndex)
+        key = physicalPages.physicalPages[KEY_COLUMN].getRecord(locPhyPageIndex)
+
+        columns = []
+
+        for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
+            columns.append(physicalPages.physicalPages[i].getRecord(locPhyPageIndex))
+
+        record =  Record(key, indirection, timeStamp, encoding, columns)
+        record.RID = RID
+
+        return record
+        
 
     #INSERT -> only created new BASE Records
     #input: values: values of columns to be inserted; excluding the metadata
@@ -103,14 +134,14 @@ class PhysicalPages:
         self.physicalPages = []
         self.numOfRecords = 0
 
-        for _ in range(num_columns+RECORD_COLUMN_OFFSET):
+        for _ in range(num_columns):
             self.physicalPages.append(Page())
 
     # record location = [locType, locPRIndex, locBPIndex or locTPIndex]
     #returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation):
         #set last item of recordLocation
-        locPhyPageIndex = self.numOfRecords - 1
+        locPhyPageIndex = self.numOfRecords 
         recordLocation.append(locPhyPageIndex)
 
         #create New RID with record Location
@@ -120,6 +151,7 @@ class PhysicalPages:
         self.physicalPages[RID_COLUMN].write(RID)
         self.physicalPages[TIMESTAMP_COLUMN].write(record.timestamp)
         self.physicalPages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+        self.physicalPages[KEY_COLUMN].write(record.key)
 
         for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
             columnData = record.columns[col - RECORD_COLUMN_OFFSET]
@@ -171,6 +203,7 @@ class PageRange:
                 recordLocation.append(locBPIndex)
 
                 #write to the pages
+                currBasePage = self.basePages[self.currBasePageIndex]
                 currBasePage.setPageRecord(record, recordLocation)
                 return True #succesfully inserted a new record into Page Rage
             else:
@@ -306,5 +339,7 @@ class PageDirectory:
         RID //=100
         locPRIndex = RID % 100
         RID //= 100
+
+        #RID => locType
         return [RID, locPRIndex, lock_PIndex, locPhyPageIndex]
         
