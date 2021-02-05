@@ -170,17 +170,29 @@ class TestTableFunctionality(unittest.TestCase):
 
         self.assertEqual(tailRecord2.columns, [10, 0, 0, 5, 906659671])
 
+    def test_table_updateRecordWithDeleteFlag(self):
+        numOfRecordsAdded = 10
+        values = [2, 3, 4, 5, 6]
 
+        for i in range(0, numOfRecordsAdded):
+            values = [0, 0, 0, 0, 1 + i]
+            self.table.createNewRecord(i + 1, values)
 
+        self.table.updateRecord(123456, 100000000, [1,2,3,4,5], deleteFlag=True)
 
+        baseRecord = self.table.getRecord(100000000)
 
+        self.assertEqual(baseRecord.encoding, 1)
 
+        deleteTailRID = baseRecord.indirection
+        deleteTailRecord = self.table.getRecord(deleteTailRID)
 
-
-
-
-
-
+        self.assertEqual(deleteTailRecord.encoding, 2)
+        self.assertEqual(deleteTailRecord.columns[0], 0)
+        self.assertEqual(deleteTailRecord.columns[1], 0)
+        self.assertEqual(deleteTailRecord.columns[2], 0)
+        self.assertEqual(deleteTailRecord.columns[3], 0)
+        self.assertEqual(deleteTailRecord.columns[4], 0)
 
     def test_table_getLatestupdatedRecord(self):
         numOfRecordsAdded = 10
@@ -208,7 +220,6 @@ class TestTableFunctionality(unittest.TestCase):
         expectedValue = [10, 5, 0, 0, 3]
 
         self.assertEqual(expectedValue, value)
-
 
     def test_table_getUpdatedRow(self):
         currValues = [1, 2, 3, 4, 5]
