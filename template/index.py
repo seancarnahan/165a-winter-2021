@@ -99,7 +99,7 @@ class Index:
 
         matching_rids = []
 
-        if begin < self.seeds[column+RECORD_COLUMN_OFFSET][0] or begin > self.seeds[column+RECORD_COLUMN_OFFSET][2]:
+        if end < self.seeds[column+RECORD_COLUMN_OFFSET][0] or begin > self.seeds[column+RECORD_COLUMN_OFFSET][2]:
             return matching_rids
 
         index = self.indices[column+RECORD_COLUMN_OFFSET]
