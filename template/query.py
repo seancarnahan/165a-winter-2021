@@ -61,19 +61,18 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, key, column, query_columns):
-        rid = self.table.index.locate(column, key)
-        record = self.table.getRecord(rid)
-        if record.encoding == 2:
-            return False
-        valueList = []
-        counter = 0
+        rids = self.table.index.locate(column, key)
+        recordList = []
         try:
-            for bit in query_columns:
-                counter += 1
-                if bit == 1:
-                    value = record.columns[counter - 1]
-                    valueList.append(value)
-            return valueList
+            for rid in rids:
+                record = self.table.getRecord(rid)
+                counter = 0
+                for bit in query_columns:
+                    counter += 1
+                    if bit == 0:
+                        record.columns[counter - 1] = None
+                    recordList.append(record)
+            return recordList
         except:
             return False
 
@@ -86,10 +85,6 @@ class Query:
     def update(self, key, *columns):
         # rid is the rid of base record
         rids = self.table.index.locate(self.table.key, key)
-        for rid in rids:
-            record = self.table.getRecord(rid)
-            if record.encoding == 2:
-                return False
         try:
             for rid in rids:
                 self.table.updateRecord(key, rid, columns)
@@ -107,16 +102,15 @@ class Query:
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         ridRange = self.table.index.locate_range(start_range, end_range,
-                                                 aggregate_column_index)
-        sum = 0
-        try:
-            for rid in ridRange:
-                record = self.table.getRecord(rid)
-                value = record.columns[aggregate_column_index]
-                sum += value
-            return sum
-        except:
+                                                 self.table.key)
+        if ridRange == []:
             return False
+        sum = 0
+        for rid in ridRange:
+            record = self.table.getRecord(rid)
+            value = record.columns[aggregate_column_index]
+            sum += value
+        return sum
 
 
     """
