@@ -32,11 +32,11 @@ class TestQueryFunctionality(unittest.TestCase):
         self.assertEqual([7, 6], select2)
 
     def test_update(self):
-        update = self.query.update(0, [30, 9, 9, 9, 9])
+        update = self.query.update(30, [30, 9, 9, 9, 9])
         self.assertEqual(True, update)
 
         rid_list = self.index.locate(0, 30)
-        rid = rid_list.pop() # get the only rid from the list of rids returned
+        rid = rid_list.pop()  # get the only rid from the list of rids returned
         record = self.table.getRecord(rid)
         self.assertEqual(record.columns, [30, 9, 9, 9, 9])
 

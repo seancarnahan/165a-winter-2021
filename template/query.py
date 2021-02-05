@@ -86,7 +86,7 @@ class Query:
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
-                self.table.updateRecord(key, rid, columns)
+                self.table.updateRecord(0, rid, *columns)
             return True
         except:
             return False
