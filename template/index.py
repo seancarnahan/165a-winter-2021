@@ -34,15 +34,33 @@ class Index:
         self.table = table
 
     def insert(self, rid, values):
+        """
+        :param rid: int. rid to insert.
+        :param values: list. values corresponding to rid.
+        """
         for i in range(len(self.indices)):
             if self.indices[i] is not None:
                 self.insertIntoIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
 
     def updateIndexes(self, rid, oldValues, newValues):
+        """
+        :param rid: int. rid to update.
+        :param oldValues: list. old values corresponds to rid.
+        :param newValues: list. updated values corresponding to rid.
+        """
         for i in range(len(self.indices)):
             if self.indices[i] is not None:
                 if oldValues[i] != newValues[i]:
                     self.update_index(i, rid, oldValues[i], newValues[i])
+
+    def remove(self, rid, values):
+        """
+        :param rid: int. rid to remove
+        :param values: list. values corresponds to rid.
+        """
+        for i in range(len(self.indices)):
+            if self.indices[i] is not None:
+                self.removeFromIndex(i, rid, values[i])
 
     def locate(self, column, value):
         """
