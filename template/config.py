@@ -1,6 +1,9 @@
 # Global Setting for the Database
 # PageSize, StartRID, etc..
 
+def init():
+    pass
+
 #number of records that page can store
 PAGE_SIZE = 1000
 
