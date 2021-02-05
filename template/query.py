@@ -102,11 +102,12 @@ class Query:
     def sum(self, start_range, end_range, aggregate_column_index):
         ridRange = self.table.index.locate_range(start_range, end_range,
                                                  self.table.key)
+
         if ridRange == []:
             return False
         sum = 0
         for rid in ridRange:
-            record = self.table.getRecord(rid)
+            record = self.table.getLatestupdatedRecord(rid)
             value = record.columns[aggregate_column_index]
             sum += value
         return sum
