@@ -1,20 +1,22 @@
 import unittest
+import math
 
 from template.config import MAX_PAGE_RANGE_SIZE, PAGE_SIZE
 from template.table import PageRange, PhysicalPages, Record
+from template.config import *
 from unittest import mock
 
 
 class PageRangeTester(unittest.TestCase):
 
     def setUp(self):
-        self.numColumns = 4
+        self.numColumns = 4 + RECORD_COLUMN_OFFSET
         self.fakeDataColumns = [1, 2, 3, 4]
         self.pageRange = PageRange(self.numColumns)
 
     def test_init(self):
         self.assertEqual(self.numColumns, self.pageRange.num_columns)
-        self.assertEqual(MAX_PAGE_RANGE_SIZE / self.numColumns, self.pageRange.getPageRangeCapacity())
+        self.assertEqual(math.floor(MAX_PAGE_RANGE_SIZE / self.numColumns), self.pageRange.getPageRangeCapacity())
         self.assertEqual(self.pageRange.currBasePageIndex, 0)
         self.assertEqual(self.pageRange.currTailPageIndex, 0)
         self.assertIsInstance(self.pageRange.basePages[0], PhysicalPages)
@@ -51,14 +53,14 @@ class PageRangeTester(unittest.TestCase):
     @mock.patch('template.table.PhysicalPages.hasCapacity', return_value=True)
     def test_insertTailRecord(self, mockHasCapacity):
         record = Record(0, 0, 12345, 0, self.fakeDataColumns)
-        recordLocation = [0, 0]
+        recordLocation = [2, 0]
 
         self.assertTrue(self.pageRange.insertTailRecord(record, recordLocation))
 
     @mock.patch('template.table.PhysicalPages.hasCapacity', return_value=False)
     def test_insertTailRecord2(self, mockHasCapacity):
         record = Record(0, 0, 12345, 0, self.fakeDataColumns)
-        recordLocation = [0, 0]
+        recordLocation = [2, 0]
 
         self.assertEqual(len(self.pageRange.tailPages),1)
         self.assertEqual(self.pageRange.currTailPageIndex, 0)
