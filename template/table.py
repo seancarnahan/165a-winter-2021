@@ -44,8 +44,9 @@ class Table:
     def __init__(self, name, num_columns, key):
         self.name = name
         self.key = key
-        self.num_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_columns)
+        self.num_columns = num_columns
+        self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
+        self.page_directory = PageDirectory(self.num_all_columns)
         self.index = Index(self)
         self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
@@ -72,7 +73,7 @@ class Table:
 
         columns = []
 
-        for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
+        for i in range(RECORD_COLUMN_OFFSET, self.num_all_columns):
             columns.append(physicalPages.physicalPages[i].getRecord(locPhyPageIndex))
 
         record = Record(key, indirection, timeStamp, encoding, columns)

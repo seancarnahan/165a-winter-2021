@@ -27,7 +27,7 @@ class Query:
         # schema encoding = 2 for delete
         rid = self.table.index.locate(self.table.key, key)
         values = []
-        for value in range(self.table.num_columns - RECORD_COLUMN_OFFSET):
+        for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
             self.table.index.remove(rid, values)
@@ -121,9 +121,9 @@ class Query:
     # Returns False if no record matches key or if target record is locked by 2PL.
     """
     def increment(self, key, column):
-        r = self.select(key, self.table.key, [1] * self.table.num_columns)[0]
+        r = self.select(key, self.table.key, [1] * self.table.num_all_columns)[0]
         if r is not False:
-            updated_columns = [None] * self.table.num_columns
+            updated_columns = [None] * self.table.num_all_columns
             updated_columns[column] = r[column] + 1
             u = self.update(key, *updated_columns)
             return u

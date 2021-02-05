@@ -29,8 +29,8 @@ class Index:
 
     def __init__(self, table):
         # One index for each table. All our empty initially.
-        self.indices = [None] * table.num_columns
-        self.seeds = [None] * table.num_columns
+        self.indices = [None] * table.num_all_columns
+        self.seeds = [None] * table.num_all_columns
         self.table = table
 
     def insert(self, rid, values):
@@ -260,8 +260,11 @@ class Index:
         else:
             prevKey = seeds[1]
 
-        while prevKey < key:
-            prevKey = index[prevKey][1]  # find largest key that is < newKey
+        while index[prevKey][1] is not None:
+            if index[prevKey][1] < key:
+                prevKey = index[prevKey][1]  # find largest key that is < newKey
+            else:
+                break
 
         nextKey = index[prevKey][1]  # store the key that the newKey should point to
         index[prevKey][1] = key  # make the prevKey point to the new key
