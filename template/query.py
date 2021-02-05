@@ -46,7 +46,7 @@ class Query:
     """
     def insert(self, *columns):
         try:
-            self.table.createNewRecord(columns[0], *columns)
+            self.table.createNewRecord(columns[0], columns)
             return True
         except:
             return False
@@ -86,7 +86,7 @@ class Query:
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
-                self.table.updateRecord(0, rid, *columns)
+                self.table.updateRecord(self.table.key, rid, *columns)
             return True
         except:
             return False
