@@ -280,7 +280,7 @@ class PageRange:
             currTailPage = self.tailPages[self.currTailPageIndex]
 
             #update location
-            locTPIndex = self.currBasePageIndex
+            locTPIndex = self.currTailPageIndex
             recordLocation.append(locTPIndex)
 
             #write to the pages
