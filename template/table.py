@@ -70,6 +70,9 @@ class Table:
         encoding = physicalPages.physicalPages[SCHEMA_ENCODING_COLUMN].getRecord(locPhyPageIndex)
         key = physicalPages.physicalPages[self.key + RECORD_COLUMN_OFFSET].getRecord(locPhyPageIndex)
 
+        print("check 1-------")
+        print(RID)
+
         columns = []
 
         for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
@@ -79,7 +82,21 @@ class Table:
         record.RID = RID
 
         return record
-        
+
+    """
+    return the latest updated tail record of the given base RID
+    :param baseRID: integer     #rid of the base page you want the latest updates for
+    """
+    def getLatestupdatedRecord(self, baseRID):
+        record = self.getRecord(baseRID)
+
+        while (record.encoding != 0):
+
+            record = self.getRecord(record.indirection)
+
+        print(record.RID)
+
+        return record
 
     #INSERT -> only created new BASE Records
     #input: values: values of columns to be inserted; excluding the metadata
@@ -177,6 +194,8 @@ class PhysicalPages:
         RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
 
         record.RID = RID
+
+        print("creating RID: " + str(record.RID))
 
         self.physicalPages[INDIRECTION_COLUMN].write(record.indirection)
         self.physicalPages[RID_COLUMN].write(RID)
