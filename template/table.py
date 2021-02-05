@@ -44,8 +44,9 @@ class Table:
     def __init__(self, name, num_columns, key):
         self.name = name
         self.key = key
-        self.num_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_columns)
+        self.num_columns = num_columns
+        self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
+        self.page_directory = PageDirectory(self.num_all_columns)
         self.index = Index(self)
         self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
@@ -72,7 +73,7 @@ class Table:
 
         columns = []
 
-        for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
+        for i in range(RECORD_COLUMN_OFFSET, self.num_all_columns):
             columns.append(physicalPages.physicalPages[i].getRecord(locPhyPageIndex))
 
         record = Record(key, indirection, timeStamp, encoding, columns)
@@ -127,7 +128,10 @@ class Table:
 
             updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
 
-        self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
+        if prevUpdateRecord is not None:
+            self.index.updateIndexes(baseRecord.RID, prevUpdateRecord.columns, updatedValues)
+        else:
+            self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
 
         #step 2: create New tail Record
         indirection = 0
@@ -157,8 +161,6 @@ class Table:
         basePagePhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
-
-
 
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
@@ -277,7 +279,7 @@ class PageRange:
             currTailPage = self.tailPages[self.currTailPageIndex]
 
             #update location
-            locTPIndex = self.currBasePageIndex
+            locTPIndex = self.currTailPageIndex
             recordLocation.append(locTPIndex)
 
             #write to the pages

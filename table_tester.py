@@ -17,8 +17,8 @@ class TestTableFunctionality(unittest.TestCase):
 
         self.assertEqual(self.table.name, "grades")
         self.assertEqual(self.table.key, 0)
-        self.assertEqual(self.table.num_columns, 9)
-        self.assertEqual(self.table.page_directory.num_columns, 9)
+        self.assertEqual(self.table.num_all_columns, 9)
+        self.assertEqual(self.table.page_directory.num_all_columns, 9)
         self.assertEqual(self.table.page_directory.currPageRangeIndex, 0)
         self.assertEqual(self.table.index.table, self.table)
         self.assertEqual(self.table.latestRID, None)

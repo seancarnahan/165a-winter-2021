@@ -1,5 +1,6 @@
 import unittest
 from collections import defaultdict
+from random import randrange
 
 from template.table import Table
 from template.config import RECORD_COLUMN_OFFSET
@@ -243,6 +244,28 @@ class IndexTester(unittest.TestCase):
         retrieved_rids = self.idx.locate_range(begin, end, key)
 
         self.assertListEqual(ridsInRange, retrieved_rids)
+
+    def test_rhashLinkedList(self):
+
+        dataset = []
+        for i in range(0, 100):
+            rid = randrange(1000)
+            k = randrange(100)
+            data = (k, k%10, k%100, k%500, 0)
+            dataset.append((rid, data))
+            self.idx.insert(rid, data)
+
+        colIdx = self.getColumnIndex(0)
+
+        sortedKeys = list(colIdx.keys())
+        sortedKeys.sort()
+
+        testKey = self.idx.seeds[self.key+RECORD_COLUMN_OFFSET][0]
+
+        for key in sortedKeys:
+            self.assertEqual(key, testKey)
+            testKey = colIdx[testKey][1]
+
 
 
 if __name__ == '__main__':
