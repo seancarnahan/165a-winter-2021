@@ -133,6 +133,7 @@ class Table:
             updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
 
         self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
+        
         #step 2: add tail page and return RID
 
         #create New tail Record
@@ -148,14 +149,19 @@ class Table:
         if baseRecord.indirection != 0:
             locType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(prevUpdateRecord.RID)
             prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locTPIndex, locPhyPageIndex).physicalPages
-            prevTailRecordPhysicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
-            prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].write(1)
+            prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
+            prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
         #Step 4: update base page with location of new tail record
         locType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
         basePagePhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
-        basePagePhysicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
-        basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].write(1)
+        basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
+        basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
+
+    def invalidateRecord(self):
+        pass
+
+        
 
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
