@@ -70,9 +70,6 @@ class Table:
         encoding = physicalPages.physicalPages[SCHEMA_ENCODING_COLUMN].getRecord(locPhyPageIndex)
         key = physicalPages.physicalPages[self.key + RECORD_COLUMN_OFFSET].getRecord(locPhyPageIndex)
 
-        print("check 1-------")
-        print(RID)
-
         columns = []
 
         for i in range(RECORD_COLUMN_OFFSET, self.num_columns):
@@ -89,12 +86,14 @@ class Table:
     """
     def getLatestupdatedRecord(self, baseRID):
         record = self.getRecord(baseRID)
+        currRecordEncoding = record.encoding
 
-        while (record.encoding != 0):
+        print("enter here 1")
+        while (currRecordEncoding != 0):
+            print("enter here")
 
-            record = self.getRecord(record.indirection)
-
-        print(record.RID)
+            newRecord = self.getRecord(record.indirection)
+            currRecordEncoding = newRecord.encoding
 
         return record
 
@@ -194,8 +193,6 @@ class PhysicalPages:
         RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
 
         record.RID = RID
-
-        print("creating RID: " + str(record.RID))
 
         self.physicalPages[INDIRECTION_COLUMN].write(record.indirection)
         self.physicalPages[RID_COLUMN].write(RID)
