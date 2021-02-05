@@ -104,7 +104,10 @@ class Index:
 
         index = self.indices[column+RECORD_COLUMN_OFFSET]
 
-        currKey = self.seeds[column+RECORD_COLUMN_OFFSET][0] # set currKey to minKey
+        if self.seeds[column + RECORD_COLUMN_OFFSET][0] > begin:
+            currKey = self.seeds[column+RECORD_COLUMN_OFFSET][0]  # set currKey to minKey
+        else:
+            currKey = begin
 
         if begin > self.seeds[column+RECORD_COLUMN_OFFSET][1]: # if begin > medianKey, skip everything before medianKey
             currKey = self.seeds[column+RECORD_COLUMN_OFFSET][1]
