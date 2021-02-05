@@ -26,7 +26,6 @@ class Query:
         # RID is for the base record
         # schema encoding = 2 for delete
         # add a new record to tail page
-        # fix syntax below for KEY_COLUMN
         rid = self.table.index.locate(self.table.key, key)
         values = []
         for value in range(self.table.num_columns - RECORD_COLUMN_OFFSET):
