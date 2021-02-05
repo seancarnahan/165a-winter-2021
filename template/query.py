@@ -47,7 +47,7 @@ class Query:
     """
     def insert(self, *columns):
         try:
-            self.table.createNewRecord(columns[0], *columns)
+            self.table.createNewRecord(columns[0], columns)
             return True
         except:
             return False
@@ -61,19 +61,18 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, key, column, query_columns):
-        rid = self.table.index.locate(column, key)
-        record = self.table.getRecord(rid)
-        if record.encoding == 2:
-            return False
-        valueList = []
-        counter = 0
+        rids = self.table.index.locate(column, key)
+        recordList = []
         try:
-            for bit in query_columns:
-                counter += 1
-                if bit == 1:
-                    value = record.columns[counter - 1]
-                    valueList.append(value)
-            return valueList
+            for rid in rids:
+                record = self.table.getRecord(rid)
+                counter = 0
+                for bit in query_columns:
+                    counter += 1
+                    if bit == 0:
+                        record.columns[counter - 1] = None
+                    recordList.append(record)
+            return recordList
         except:
             return False
 

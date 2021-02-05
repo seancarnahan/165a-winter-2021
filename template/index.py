@@ -258,8 +258,11 @@ class Index:
         else:
             prevKey = seeds[1]
 
-        while prevKey < key:
-            prevKey = index[prevKey][1]  # find largest key that is < newKey
+        while index[prevKey][1] is not None:
+            if index[prevKey][1] < key:
+                prevKey = index[prevKey][1] # find largest key that is < newKey
+            else:
+                break
 
         nextKey = index[prevKey][1]  # store the key that the newKey should point to
         index[prevKey][1] = key  # make the prevKey point to the new key
