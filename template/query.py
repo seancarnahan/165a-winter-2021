@@ -64,7 +64,7 @@ class Query:
         recordList = []
         try:
             for rid in rids:
-                record = self.table.getRecord(rid)
+                record = self.table.getLatestupdatedRecord(rid)
                 counter = 0
                 for bit in query_columns:
                     counter += 1
@@ -86,7 +86,7 @@ class Query:
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
-                self.table.updateRecord(self.table.key, rid, *columns)
+                self.table.updateRecord(self.table.key, rid, columns)
             return True
         except:
             return False

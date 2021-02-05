@@ -128,7 +128,10 @@ class Table:
 
             updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
 
-        self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
+        if prevUpdateRecord is not None:
+            self.index.updateIndexes(baseRecord.RID, prevUpdateRecord.columns, updatedValues)
+        else:
+            self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
 
         #step 2: create New tail Record
         indirection = 0
@@ -158,8 +161,6 @@ class Table:
         basePagePhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
-
-        print('get here')
 
     
     #input currValues and update should both be lists of integers of equal lengths

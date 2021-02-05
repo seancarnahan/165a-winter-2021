@@ -50,8 +50,8 @@ class Index:
         """
         for i in range(len(self.indices)):
             if self.indices[i] is not None:
-                if oldValues[i] != newValues[i]:
-                    self.update_index(i, rid, oldValues[i], newValues[i])
+                if oldValues[i-RECORD_COLUMN_OFFSET] != newValues[i-RECORD_COLUMN_OFFSET]:
+                    self.update_index(i, rid, oldValues[i-RECORD_COLUMN_OFFSET], newValues[i-RECORD_COLUMN_OFFSETCLEAR])
 
     def remove(self, rid, values):
         """
