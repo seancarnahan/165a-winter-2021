@@ -46,7 +46,7 @@ class Query:
     """
     def insert(self, *columns):
         try:
-            self.table.createNewRecord(columns[0], columns)
+            self.table.createNewRecord(columns[0], *columns)
             return True
         except:
             return False
