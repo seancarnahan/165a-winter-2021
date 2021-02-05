@@ -135,11 +135,18 @@ class TestTableFunctionality(unittest.TestCase):
         self.assertEqual(RID, 104010999)
 
     def test_table_updateRecord(self):
+        numOfRecordsAdded = 10
+        values = [0, 0, 0, 0, 0]
+
+        for i in range(0, numOfRecordsAdded):
+            values = [0, 0, 0, 0, 1 + i]
+            self.table.createNewRecord(i + 1, values)
+
         self.table.updateRecord(1234, 100000000, [None, None, None, None, 906659671])
 
         updatedBaseRecord = self.table.getRecord(100000000)
         self.assertEqual(updatedBaseRecord.encoding, 1)
-        self.assertNotEquals(updatedBaseRecord.indirection, 0)
+        self.assertNotEqual(updatedBaseRecord.indirection, 0)
 
         expectedValues = self.table.getUpdatedRow(updatedBaseRecord.columns, [None, None, None, None, 906659671])
 
@@ -147,6 +154,72 @@ class TestTableFunctionality(unittest.TestCase):
         tailRecord = self.table.getRecord(updateTailRID)
 
         self.assertEqual(tailRecord.columns, expectedValues)
+
+        #test another update
+        self.table.updateRecord(1234, 100000000, [10, None, None, 5, None])
+        updatedBaseRecord2 = self.table.getRecord(100000000)
+
+        #check that prev tail page points to new tail page
+        tailRecord = self.table.getRecord(updateTailRID)
+        self.assertNotEqual(tailRecord.indirection, 0)
+        self.assertEqual(tailRecord.encoding, 1)
+
+        #get new Tail Record
+        updateTailRID2 = updatedBaseRecord2.indirection
+        tailRecord2 = self.table.getRecord(updateTailRID2)
+
+        self.assertEqual(tailRecord2.columns, [10, 0, 0, 5, 906659671])
+
+    def test_table_updateRecordWithDeleteFlag(self):
+        numOfRecordsAdded = 10
+        values = [2, 3, 4, 5, 6]
+
+        for i in range(0, numOfRecordsAdded):
+            values = [0, 0, 0, 0, 1 + i]
+            self.table.createNewRecord(i + 1, values)
+
+        self.table.updateRecord(123456, 100000000, [1,2,3,4,5], deleteFlag=True)
+
+        baseRecord = self.table.getRecord(100000000)
+
+        self.assertEqual(baseRecord.encoding, 1)
+
+        deleteTailRID = baseRecord.indirection
+        deleteTailRecord = self.table.getRecord(deleteTailRID)
+
+        self.assertEqual(deleteTailRecord.encoding, 2)
+        self.assertEqual(deleteTailRecord.columns[0], 0)
+        self.assertEqual(deleteTailRecord.columns[1], 0)
+        self.assertEqual(deleteTailRecord.columns[2], 0)
+        self.assertEqual(deleteTailRecord.columns[3], 0)
+        self.assertEqual(deleteTailRecord.columns[4], 0)
+
+    def test_table_getLatestupdatedRecord(self):
+        numOfRecordsAdded = 10
+        values = [0, 0, 0, 0, 0]
+
+        for i in range(0, numOfRecordsAdded):
+            values = [0, 0, 0, 0, 1 + i]
+            self.table.createNewRecord(i + 1, values)
+
+        baseRID = 100000002 #already updated from previous test
+
+        self.table.updateRecord(123456, baseRID, [10, None, None, None, None])
+
+        record = self.table.getLatestupdatedRecord(baseRID)
+
+        value = record.columns[0]
+        expectedValue = 10
+
+        self.assertEqual(expectedValue, value)
+
+        ##add another update
+        self.table.updateRecord(123456, baseRID, [None, 5, None, None, None])
+        record = self.table.getLatestupdatedRecord(baseRID)
+        value = record.columns
+        expectedValue = [10, 5, 0, 0, 3]
+
+        self.assertEqual(expectedValue, value)
 
     def test_table_getUpdatedRow(self):
         currValues = [1, 2, 3, 4, 5]

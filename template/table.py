@@ -79,7 +79,18 @@ class Table:
         record.RID = RID
 
         return record
-        
+
+    """
+    return the latest updated tail record of the given base RID
+    :param baseRID: integer     #rid of the base page you want the latest updates for
+    """
+    def getLatestupdatedRecord(self, baseRID):
+        record = self.getRecord(baseRID)
+
+        while (record.encoding != 0):
+            record = self.getRecord(record.indirection)
+
+        return record
 
     #INSERT -> only created new BASE Records
     #input: values: values of columns to be inserted; excluding the metadata
@@ -100,7 +111,7 @@ class Table:
 
     #input: values: values of columns to be inserted; excluding the metadata
     #input: RID: the RID of the base Record you would like to provide an update for
-    def updateRecord(self, key, RID, values):
+    def updateRecord(self, key, RID, values, deleteFlag=False):
         #Step 1: get the updated Values
         baseRecord = self.getRecord(RID)
         prevUpdateRecord = None
@@ -117,30 +128,37 @@ class Table:
             updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
 
         self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
-        #step 2: add tail page and return RID
 
-        #create New tail Record
+        #step 2: create New tail Record
         indirection = 0
         timeStamp = self.getNewTimeStamp()
         encoding = 0
+        
+        #check for delete flag
+        if deleteFlag == True:
+            encoding = 2
+            for i in range(len(updatedValues)):
+                updatedValues[i] = 0
+
         record = Record(key, indirection, timeStamp, encoding, updatedValues)
 
-        #add the record and get the RID
+        #step 3: add the record and get the RID
         tailRecordRID = self.page_directory.insertTailRecord(RID, record)
 
-        #step 3: if there is a prevTail, then set the prev tail record to point to the new tail record
+        #step 4: if there is a prevTail, then set the prev tail record to point to the new tail record
         if baseRecord.indirection != 0:
             locType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(prevUpdateRecord.RID)
             prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locTPIndex, locPhyPageIndex).physicalPages
-            prevTailRecordPhysicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
-            prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].write(1)
+            prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
+            prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-        #Step 4: update base page with location of new tail record
+        #Step 5: update base page with location of new tail record
         locType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
         basePagePhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
-        basePagePhysicalPages[INDIRECTION_COLUMN].write(tailRecordRID)
-        basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].write(1)
+        basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
+        basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
+    
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
     def getUpdatedRow(self, currValues, update):
