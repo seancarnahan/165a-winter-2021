@@ -37,7 +37,7 @@ class TestQueryFunctionality(unittest.TestCase):
 
         rid_list = self.index.locate(0, 30)
         rid = rid_list.pop()  # get the only rid from the list of rids returned
-        record = self.table.getRecord(rid)
+        record = self.table.getLatestupdatedRecord(rid)
         self.assertEqual(record.columns, [30, 9, 9, 9, 9])
 
     def test_delete(self):
