@@ -8,16 +8,16 @@ from template.config import *
 class TestQueryFunctionality(unittest.TestCase):
     def setUp(self):
         self.name = "grades"
-        self.key = 1234
+        self.key = 0
         self.num_columns = 5
 
         self.table = Table(self.name, self.num_columns, self.key)
         self.query = Query(self.table)
         self.index = Index(self.table)
 
-        self.table.createNewRecord(10, [5, 6, 7, 8, 9])
-        self.table.createNewRecord(20, [9, 8, 7, 6, 5])
-        self.table.createNewRecord(30, [7, 6, 5, 4, 3])
+        self.table.createNewRecord(0, [10, 6, 7, 8, 9])
+        self.table.createNewRecord(0, [20, 8, 7, 6, 5])
+        self.table.createNewRecord(0, [30, 6, 5, 4, 3])
         self.table.index.create_index(4)
         self.table.index.create_index(0 + RECORD_COLUMN_OFFSET)
 
@@ -43,18 +43,18 @@ class TestQueryFunctionality(unittest.TestCase):
     def test_delete(self):
         grades = self.table
 
-        corr_table = Table("grades_copy", 5, 2345)
-        corr_table.createNewRecord(10, [5, 6, 7, 8, 9])
-        corr_table.createNewRecord(20, [9, 8, 7, 6, 5])
+        corr_table = Table("grades_copy", 5, 0)
+        corr_table.createNewRecord(0, [10, 6, 7, 8, 9])
+        corr_table.createNewRecord(0, [20, 8, 7, 6, 5])
 
         self.query.delete(30)
 
         self.assertNotEqual(grades, corr_table)
 
     def test_sum(self):
-        check_sum = self.query.sum(0, 8, 0 + RECORD_COLUMN_OFFSET)
+        check_sum = self.query.sum(0, 30, 4)
         # column 0 add first two values
 
         # key 10, col 0 = 5 within range of 0-8
         # key 30, col 0 = 7 within range of 0-8
-        self.assertEqual(check_sum, 12)
+        self.assertEqual(17, check_sum)
