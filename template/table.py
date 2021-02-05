@@ -32,7 +32,7 @@ class Record:
     def getNewRID(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
         num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex*(10**4) + locPhyPageIndex
 
-        return num        
+        return num
 
 class Table:
 
@@ -51,7 +51,7 @@ class Table:
         self.latestRID = None
 
         self.currPageRangeIndex = 0
-    
+
     #Input: RID
     #Output: Record Object with RID added
     def getRecord(self, RID):
@@ -133,7 +133,7 @@ class Table:
         indirection = 0
         timeStamp = self.getNewTimeStamp()
         encoding = 0
-        
+
         #check for delete flag
         if deleteFlag == True:
             encoding = 2
@@ -158,9 +158,8 @@ class Table:
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-        print('get here')
 
-    
+
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
     def getUpdatedRow(self, currValues, update):
@@ -190,7 +189,7 @@ class PhysicalPages:
     #returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation):
         #set last item of recordLocation
-        locPhyPageIndex = self.numOfRecords 
+        locPhyPageIndex = self.numOfRecords
         recordLocation.append(locPhyPageIndex)
 
         #create New RID with record Location
@@ -209,7 +208,7 @@ class PhysicalPages:
             self.physicalPages[col].write(columnData)
 
         self.numOfRecords += 1
-        
+
         return RID
 
     def hasCapacity(self):
@@ -227,7 +226,7 @@ class PageRange:
         self.maxNumOfBasePages = self.getPageRangeCapacity()
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0
-        
+
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]
 
@@ -291,7 +290,7 @@ class PageRange:
             return True
         else:
             return False
-  
+
 
     def addNewTailPage(self):
         self.currTailPageIndex += 1
@@ -333,10 +332,10 @@ class PageDirectory:
 
         currPageRange = self.pageRanges[self.currPageRangeIndex]
 
-        if currPageRange.insertBaseRecord(record, recordLocation): 
+        if currPageRange.insertBaseRecord(record, recordLocation):
             #successfully added a record into pageDir
             return True
-        else: 
+        else:
             #create new Page Range and add the record to the new Page Range
             self.addNewPageRange()
             currPageRange = self.pageRanges[self.currPageRangeIndex]
@@ -362,9 +361,9 @@ class PageDirectory:
         #PageRange that has the baseRID
         pageRange = self.pageRanges[locPRIndex]
 
-        #set indirection and encoding of base RID 
+        #set indirection and encoding of base RID
         return pageRange.insertTailRecord(record, recordLocation)
-        
+
 
     def addNewPageRange(self):
         self.pageRanges.append(PageRange(self.num_columns))
@@ -392,4 +391,3 @@ class PageDirectory:
 
         #RID => locType
         return [RID, locPRIndex, lock_PIndex, locPhyPageIndex]
-        
