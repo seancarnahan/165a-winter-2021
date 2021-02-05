@@ -51,7 +51,7 @@ class Index:
         for i in range(len(self.indices)):
             if self.indices[i] is not None:
                 if oldValues[i-RECORD_COLUMN_OFFSET] != newValues[i-RECORD_COLUMN_OFFSET]:
-                    self.update_index(i, rid, oldValues[i-RECORD_COLUMN_OFFSET], newValues[i-RECORD_COLUMN_OFFSETCLEAR])
+                    self.update_index(i, rid, oldValues[i-RECORD_COLUMN_OFFSET], newValues[i-RECORD_COLUMN_OFFSET])
 
     def remove(self, rid, values):
         """
@@ -98,22 +98,23 @@ class Index:
             raise InvalidColumnError(column)
 
         matching_rids = []
+        seeds = self.seeds[column+RECORD_COLUMN_OFFSET]
 
-        if end < self.seeds[column+RECORD_COLUMN_OFFSET][0] or begin > self.seeds[column+RECORD_COLUMN_OFFSET][2]:
+        if end < seeds[0] or begin > seeds[2]:
             return matching_rids
 
         index = self.indices[column+RECORD_COLUMN_OFFSET]
 
-        if self.seeds[column + RECORD_COLUMN_OFFSET][0] > begin:
-            currKey = self.seeds[column+RECORD_COLUMN_OFFSET][0]  # set currKey to minKey
+        if seeds[0] > begin:
+            currKey = seeds[0]  # set currKey to minKey
         else:
             currKey = begin
 
-        if begin > self.seeds[column+RECORD_COLUMN_OFFSET][1]: # if begin > medianKey, skip everything before medianKey
-            currKey = self.seeds[column+RECORD_COLUMN_OFFSET][1]
+        if begin > seeds[1]: # if begin > medianKey, skip everything before medianKey
+            currKey = seeds[1]
 
-        if begin == self.seeds[column+RECORD_COLUMN_OFFSET][2]: # if begin = maxKey, make currKey maxKey
-            currKey = self.seeds[column+RECORD_COLUMN_OFFSET][2]
+        if begin == seeds[2]: # if begin = maxKey, make currKey maxKey
+            currKey = seeds[2]
 
         while currKey <= end:
             matching_rids.extend(index[currKey][0])
