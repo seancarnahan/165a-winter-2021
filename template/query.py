@@ -25,19 +25,19 @@ class Query:
     def delete(self, key):
         # RID is for the base record
         # schema encoding = 2 for delete
-        rid = self.table.index.locate(self.table.key, key)
+        try:
+            rid = self.table.index.locate(self.table.key, key)
+        except IndexError:
+            return False
+
         values = []
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
-            self.table.index.remove(rid, values)
-            self.table.updateRecord(key, rid, values)
-            record = self.table.getRecord(rid)
-            record.encoding = 2
+            self.table.updateRecord(key, rid[0], values, deleteFlag=True)
             return True
         except:
             return False
-
 
     """
     # Insert a record with specified columns

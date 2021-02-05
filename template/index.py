@@ -117,10 +117,13 @@ class Index:
             currKey = seeds[2]
 
         while currKey <= end:
-            matching_rids.extend(index[currKey][0])
-            currKey = index[currKey][1]
-            if currKey is None:
-                break
+            try:
+                matching_rids.extend(index[currKey][0])
+                currKey = index[currKey][1]
+                if currKey is None:
+                    break
+            except IndexError:
+                break;
 
         return matching_rids
 
