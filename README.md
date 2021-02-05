@@ -6,6 +6,9 @@ The Page Directory maps a record RID to the page it resides in.
 
 - This class holds the page ranges for the given table.
 
+### Setup:
+- sudo pip install colorama (make sure this package is on your machine)
+
 ### Notes
 
 - The Page Directory Class holds the page ranges, not the table class.
