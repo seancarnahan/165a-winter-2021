@@ -115,6 +115,8 @@ class Index:
         while currKey <= end:
             matching_rids.extend(index[currKey][0])
             currKey = index[currKey][1]
+            if currKey is None:
+                break
 
         return matching_rids
 

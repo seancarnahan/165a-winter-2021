@@ -1,4 +1,4 @@
-from template.table import *
+from template.table import Table, Record
 from template.index import Index
 from template.config import *
 
@@ -25,13 +25,12 @@ class Query:
     def delete(self, key):
         # RID is for the base record
         # schema encoding = 2 for delete
-        # add a new record to tail page
-        # fix syntax below for KEY_COLUMN
-        rid = self.table.index.locate(RECORD_COLUMN_OFFSET, key)
+        rid = self.table.index.locate(self.table.key, key)
         values = []
-        for value in range(self.table.num_columns):
+        for value in range(self.table.num_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
+            self.table.index.remove(rid, values)
             self.table.updateRecord(key, rid, values)
             record = self.table.getRecord(rid)
             record.encoding = 2
@@ -47,7 +46,7 @@ class Query:
     """
     def insert(self, *columns):
         try:
-            self.table.createNewRecord(columns[0], *columns)
+            self.table.createNewRecord(columns[0], columns)
             return True
         except:
             return False
@@ -61,19 +60,18 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, key, column, query_columns):
-        rid = self.table.index.locate(column, key)
-        record = self.table.getRecord(rid)
-        if record.encoding == 2:
-            return False
-        valueList = []
-        counter = 0
+        rids = self.table.index.locate(column, key)
+        recordList = []
         try:
-            for bit in query_columns:
-                counter += 1
-                if bit == 1:
-                    value = record.columns[counter - 1]
-                    valueList.append(value)
-            return valueList
+            for rid in rids:
+                record = self.table.getRecord(rid)
+                counter = 0
+                for bit in query_columns:
+                    counter += 1
+                    if bit == 0:
+                        record.columns[counter - 1] = None
+                    recordList.append(record)
+            return recordList
         except:
             return False
 
@@ -85,12 +83,10 @@ class Query:
     """
     def update(self, key, *columns):
         # rid is the rid of base record
-        rid = self.table.index.locate(RECORD_COLUMN_OFFSET, key)
-        record = self.table.getRecord(rid)
-        if record.encoding == 2:
-            return False
+        rids = self.table.index.locate(self.table.key, key)
         try:
-            self.table.updateRecord(key, rid, *columns)
+            for rid in rids:
+                self.table.updateRecord(key, rid, columns)
             return True
         except:
             return False
@@ -105,16 +101,15 @@ class Query:
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         ridRange = self.table.index.locate_range(start_range, end_range,
-                                                 aggregate_column_index)
-        sum = 0
-        try:
-            for rid in ridRange:
-                record = self.table.getRecord(rid)
-                value = record.columns[aggregate_column_index - RECORD_COLUMN_OFFSET]
-                sum += value
-            return sum
-        except:
+                                                 self.table.key)
+        if ridRange == []:
             return False
+        sum = 0
+        for rid in ridRange:
+            record = self.table.getRecord(rid)
+            value = record.columns[aggregate_column_index]
+            sum += value
+        return sum
 
 
     """
@@ -133,4 +128,5 @@ class Query:
             u = self.update(key, *updated_columns)
             return u
         return False
+
 
