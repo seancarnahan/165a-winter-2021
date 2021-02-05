@@ -155,6 +155,33 @@ class TestTableFunctionality(unittest.TestCase):
 
         self.assertEqual(tailRecord.columns, expectedValues)
 
+        #test another update
+        self.table.updateRecord(1234, 100000000, [10, None, None, 5, None])
+        updatedBaseRecord2 = self.table.getRecord(100000000)
+
+        #check that prev tail page points to new tail page
+        tailRecord = self.table.getRecord(updateTailRID)
+        self.assertNotEqual(tailRecord.indirection, 0)
+        self.assertEqual(tailRecord.encoding, 1)
+
+        #get new Tail Record
+        updateTailRID2 = updatedBaseRecord2.indirection
+        tailRecord2 = self.table.getRecord(updateTailRID2)
+
+        self.assertEqual(tailRecord2.columns, [10, 0, 0, 5, 906659671])
+
+
+
+
+
+
+
+
+
+
+
+
+
     def test_table_getLatestupdatedRecord(self):
         numOfRecordsAdded = 10
         values = [0, 0, 0, 0, 0]
@@ -167,17 +194,21 @@ class TestTableFunctionality(unittest.TestCase):
 
         self.table.updateRecord(123456, baseRID, [10, None, None, None, None])
 
-        newRecord = self.table.getRecord(100000002)
-
-        print("encoding: " + str(newRecord.encoding))
-        print("indirection: " + str(newRecord.indirection))
-
         record = self.table.getLatestupdatedRecord(baseRID)
 
         value = record.columns[0]
         expectedValue = 10
 
         self.assertEqual(expectedValue, value)
+
+        ##add another update
+        self.table.updateRecord(123456, baseRID, [None, 5, None, None, None])
+        record = self.table.getLatestupdatedRecord(baseRID)
+        value = record.columns
+        expectedValue = [10, 5, 0, 0, 3]
+
+        self.assertEqual(expectedValue, value)
+
 
     def test_table_getUpdatedRow(self):
         currValues = [1, 2, 3, 4, 5]

@@ -86,14 +86,9 @@ class Table:
     """
     def getLatestupdatedRecord(self, baseRID):
         record = self.getRecord(baseRID)
-        currRecordEncoding = record.encoding
 
-        print("enter here 1")
-        while (currRecordEncoding != 0):
-            print("enter here")
-
-            newRecord = self.getRecord(record.indirection)
-            currRecordEncoding = newRecord.encoding
+        while (record.encoding != 0):
+            record = self.getRecord(record.indirection)
 
         return record
 
