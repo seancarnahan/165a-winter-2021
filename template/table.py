@@ -159,6 +159,8 @@ class Table:
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
+        print('get here')
+
     
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
@@ -166,7 +168,7 @@ class Table:
         updatedValues = []
 
         for i in range(len(currValues)):
-            if update[i] == None:
+            if update[i] is None:
                 updatedValues.append(currValues[i])
             else:
                 updatedValues.append(update[i])
