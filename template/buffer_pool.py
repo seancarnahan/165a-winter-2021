@@ -1,7 +1,8 @@
 from template.config import *
+import sys
 
 class BufferPool:
-    def __init__(self, pages):
+    def __init__(self):
         self.size = BUFFER_POOL_NUM_BASE_PAGES
         self.TPsSize = BUFFER_POOL_NUM_TAIL_PAGES_PER_BASE
         self.basePages = []
@@ -9,32 +10,56 @@ class BufferPool:
         #key: index on self.basePages
         #value: list of corresponding tail pages
         self.tailPages = {}
+    
 
+    """
+        input: [table index, type, PR Index, BP/TP index]
+        output: true or false 
 
+        sean
+    """
+    def create_file(self):
+        pass
+
+    """
+        updates: when we close the DB or evict a dirty page
+        updates the txt file
+        returns true if its able to update; else: false
+
+        long
+        
+    """
+    def update_page(self):
+        pass
+
+    """
+        input: fileName
+        return new page object
+
+        gabriel
+    """
     def read_from_disk(self):
         pass
-    
 
-    def write_from_disk(self):
-        pass
-    
+    """
+        input: page Object/ byteArray
+        return name of file created
 
-    def create_file(self):
+        sean
+    """
+    def write_to_disk(self):
         pass
 
     """
         - determine which page in the buffer pool to evict
         - check if the evictable page is dirty, if so update the page in disk
+        - pinning and unpinning counters -> might have to add that to the Page
+
+        aly
     """
     def remove_LRU_page(self):
         pass
 
-
-    """
-        updates: when we close the DB or evict a dirty page
-    """
-    def update_page(self):
-        pass
 
 
 
