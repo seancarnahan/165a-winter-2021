@@ -13,17 +13,17 @@ class Table:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-    def __init__(self, name, num_columns, key):
+    def __init__(self, name, num_columns, key, bufferPool):
         self.name = name
         self.key = key
         self.num_columns = num_columns
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_all_columns)
+        self.page_directory = PageDirectory(self.num_all_columns, bufferPool)
         self.index = Index(self)
         self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
-
         self.currPageRangeIndex = 0
+
 
     #Input: RID
     #Output: Record Object with RID added

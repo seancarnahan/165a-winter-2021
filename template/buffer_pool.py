@@ -30,11 +30,19 @@ class BufferPool:
         pass
 
 
+    """
+        updates: when we close the DB or evict a dirty page
+    """
+    def update_page(self):
+        pass
 
 
 
 
 
+
+#buffer pool writes and reads to disk
+#pageDir keeps trask of our structure of disk ???
 
 """
     size = BUFFER_POOL_SIZE

@@ -5,7 +5,7 @@ class Database:
 
     def __init__(self):
         self.tables = []
-        # self.bufferPool = BufferPool()
+        self.bufferPool = BufferPool()
 
     def open(self, path):
         pass
@@ -21,7 +21,7 @@ class Database:
     """
 
     def create_table(self, name, num_columns, key):
-        table = Table(name, num_columns, key)
+        table = Table(name, num_columns, key, self.bufferPool)
         self.tables.append(table)
         return table
 
