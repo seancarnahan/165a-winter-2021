@@ -192,6 +192,9 @@ class Index:
         return True
 
     def removeFromIndex(self, column_number, rid, value):
+        """
+        Remove 'rid' from the 'column_number' index. 'value' is the key for that rid
+        """
         try:
             if self.indices[column_number] is None:
                 raise InvalidIndexError(column_number)
@@ -234,6 +237,7 @@ class Index:
         return True
 
     def createSeeds(self, column_number):
+        """ Create the seeds for the 'column_number' index """
         keys = list(self.indices[column_number].keys())
         keys.sort()
         minKey = keys[0]
@@ -243,7 +247,7 @@ class Index:
         self.seeds[column_number] = [minKey, medianKey, maxKey]
 
     def createNewKeyEntry(self, index, column, key):
-
+        # TODO(gabriel) - clean this up. maybe rename
         index[key] = [[], None]
 
         if self.seeds[column] is None or len(index.keys()) == 1:
@@ -278,10 +282,13 @@ class Index:
         index[key] = [[], nextKey]  # make the new key point to the smallest key larger than newKey
 
     def updateMaxSeed(self, column, value):
+        """Update the max seed value for the 'column' index"""
         self.seeds[column][2] = value
 
     def updateMinSeed(self, column, value):
+        """ Update the min seed value for the 'column' index"""
         self.seeds[column][0] = value
 
     def updateMedianSeed(self, column, values):
+        """ Update the median seed value for the 'column' index by using the middle value of 'values'"""
         self.seeds[column][1] = values[int(len(values) / 2)]

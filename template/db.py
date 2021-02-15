@@ -1,11 +1,11 @@
 from template.table import Table
-
+from template.buffer_pool import BufferPool
 
 class Database:
 
     def __init__(self):
         self.tables = []
-        pass
+        self.bufferPool = BufferPool()
 
     def open(self, path):
         pass
@@ -23,7 +23,7 @@ class Database:
 
         :returns: The newly created table object
         """
-        table = Table(name, num_columns, key)
+        table = Table(name, num_columns, key, self.bufferPool)
         self.tables.append(table)
         return table
 
@@ -50,3 +50,11 @@ class Database:
                 return table
 
         raise Exception("table: " + name + " not found in database")
+
+
+    """
+    input: 
+    output: loads to page to buffer pool
+    """
+    def fetchPage(self):
+        pass
