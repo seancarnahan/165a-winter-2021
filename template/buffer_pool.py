@@ -1,5 +1,7 @@
 from template.config import *
+from template.page import Page
 import sys
+
 
 class BufferPool:
     def __init__(self):
@@ -7,10 +9,9 @@ class BufferPool:
         self.TPsSize = BUFFER_POOL_NUM_TAIL_PAGES_PER_BASE
         self.basePages = []
 
-        #key: index on self.basePages
-        #value: list of corresponding tail pages
+        # key: index on self.basePages
+        # value: list of corresponding tail pages
         self.tailPages = {}
-    
 
     """
         input: [table index, type, PR Index, BP/TP index]
@@ -18,6 +19,7 @@ class BufferPool:
 
         sean
     """
+
     def create_file(self):
         pass
 
@@ -29,17 +31,29 @@ class BufferPool:
         long
         
     """
+
     def update_page(self):
         pass
 
-    """
-        input: fileName
-        return new page object
+    def read_from_disk(self, page_file_name):  # Gabriel
+        """
+        Read data from disk
 
-        gabriel
-    """
-    def read_from_disk(self):
-        pass
+        :param page_file_name: string       # The file name corresponding to the page we want to load
+        """
+
+        # I don't think we decided on a file format so this code is mainly temporary
+
+        page = Page()
+        with open(page_file_name, 'r') as fs:
+            numRecords = int(fs.readline())
+            data = bytearray()
+            data += fs.read()
+
+        page.num_records = numRecords
+        page.data = data
+
+        return page
 
     """
         input: page Object/ byteArray
@@ -47,6 +61,7 @@ class BufferPool:
 
         sean
     """
+
     def write_to_disk(self):
         pass
 
@@ -57,17 +72,13 @@ class BufferPool:
 
         aly
     """
+
     def remove_LRU_page(self):
         pass
 
 
-
-
-
-
-
-#buffer pool writes and reads to disk
-#pageDir keeps trask of our structure of disk ???
+# buffer pool writes and reads to disk
+# pageDir keeps trask of our structure of disk ???
 
 """
     size = BUFFER_POOL_SIZE
