@@ -1,4 +1,8 @@
 import unittest
+import sys
+import os
+
+sys.path.append(os.path.abspath('../'))
 from template.table import Table, Record
 from template.query import Query
 from template.index import Index

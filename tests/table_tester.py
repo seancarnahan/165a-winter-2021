@@ -1,7 +1,10 @@
 import unittest
 import math
 from unittest import mock
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.table import *
 from template.index import Index
 from template.config import *

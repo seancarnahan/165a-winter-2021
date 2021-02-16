@@ -1,6 +1,10 @@
-from template.db import Database
 import unittest
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
+
+from template.db import Database
 
 class TestDBMethods(unittest.TestCase):
 

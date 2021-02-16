@@ -1,10 +1,13 @@
 import unittest
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.table import Table
 from template.page_directory import PageDirectory
 from template.record import Record
 from template.page_range import PageRange
-from template.page_range import PhysicalPages
+from template.physical_pages import PhysicalPages
 from unittest import mock
 
 class PageDirectoryTester(unittest.TestCase):
@@ -42,7 +45,7 @@ class PageDirectoryTester(unittest.TestCase):
         self.assertEqual(self.testDirectory.currPageRangeIndex, prev_currPageRangeIndex)
         self.assertEqual(len(self.testDirectory.pageRanges), prev_numPageRanges)
 
-    @mock.patch('template.table.PageRange.insertBaseRecord', return_value=True)
+    @mock.patch('PageRange.insertBaseRecord', return_value=True)
     def test_insertBaseRecord(self, mockInsertBaseRecord):
         key = 1234
         indirection = 0
@@ -52,7 +55,7 @@ class PageDirectoryTester(unittest.TestCase):
         testRecord = Record(key,indirection,timestamp,encoding,columns)
         self.assertTrue(self.testDirectory.insertBaseRecord(testRecord))
 
-    @mock.patch('template.table.PageRange.insertBaseRecord', return_value=False)
+    @mock.patch('template.PageRange.insertBaseRecord', return_value=False)
     def test_insertBaseRecord2(self, mockInsertBaseRecord):
         key = 1234
         indirection = 0
@@ -69,8 +72,8 @@ class PageDirectoryTester(unittest.TestCase):
         self.assertEqual(self.testDirectory.currPageRangeIndex, prev_currPageRangeIndex+1)
         self.assertEqual(len(self.testDirectory.pageRanges), prev_numPageRanges+1)
 
-    @mock.patch('template.table.PageDirectory.getRecordLocation', return_value=[0,0,0,0])
-    @mock.patch('template.table.PageRange.insertTailRecord', return_value=True)
+    @mock.patch('template.PageDirectory.getRecordLocation', return_value=[0,0,0,0])
+    @mock.patch('template.PageRange.insertTailRecord', return_value=True)
     def test_insertTailRecord(self, mockRecordLocation, mockInsertTailRecord):
         self.assertTrue(self.testDirectory.insertTailRecord(0,0))
 
