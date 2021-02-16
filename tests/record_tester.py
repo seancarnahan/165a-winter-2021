@@ -1,5 +1,8 @@
 import unittest
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.table import *
 from unittest import mock
 

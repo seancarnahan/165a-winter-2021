@@ -1,5 +1,8 @@
 import unittest
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.buffer_pool import BufferPool
 from unittest import mock
 

@@ -1,10 +1,12 @@
 import unittest
 from collections import defaultdict
 from random import randrange
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.table import Table
 from template.config import RECORD_COLUMN_OFFSET
-
 
 class IndexTester(unittest.TestCase):
 

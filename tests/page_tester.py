@@ -1,5 +1,8 @@
 import unittest
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.config import PAGE_SIZE, PAGE_RECORD_SIZE
 from template.page import Page
 from unittest.mock import patch

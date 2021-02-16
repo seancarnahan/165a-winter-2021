@@ -1,3 +1,7 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath('../'))
 from template.config import RECORD_COLUMN_OFFSET, PAGE_SIZE
 from template.table import Record, PhysicalPages
 from template.page import Page

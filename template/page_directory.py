@@ -3,14 +3,15 @@ from template.page_range import PageRange
 #PageDirectory = [PageRange()]
 class PageDirectory:
 
-    def __init__(self, num_columns, bufferPool):
+    # def __init__(self, num_columns, bufferPool):
+    def __init__(self, num_columns):
         #list of pageRanges
         #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
         self.num_columns = num_columns
         self.pageRanges = [PageRange(num_columns)]
         self.currPageRangeIndex = 0
 
-        self.bufferPool = bufferPool
+        # self.bufferPool = bufferPool
         
 
     def insertBaseRecord(self, record):

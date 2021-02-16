@@ -1,6 +1,9 @@
 import unittest
 import math
+import sys
+import os
 
+sys.path.append(os.path.abspath('../'))
 from template.config import MAX_PAGE_RANGE_SIZE, PAGE_SIZE
 from template.table import PageRange, PhysicalPages, Record
 from template.config import *
