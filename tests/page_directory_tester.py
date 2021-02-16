@@ -1,6 +1,10 @@
 import unittest
 
-from template.table import *
+from template.table import Table
+from template.page_directory import PageDirectory
+from template.record import Record
+from template.page_range import PageRange
+from template.page_range import PhysicalPages
 from unittest import mock
 
 class PageDirectoryTester(unittest.TestCase):

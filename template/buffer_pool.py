@@ -15,13 +15,16 @@ class BufferPool:
 
     """
         input: [table index, type, PR Index, BP/TP index]
+        - input should all be strings
         output: true or false 
 
         sean
     """
 
-    def create_file(self):
-        pass
+    def create_file(self, table_index: str, pageType: str, pr_index: str, _P_index: str):
+        fileName = "../disk/" + table_index + pageType + pr_index + _P_index + ".txt"
+
+        page = open(fileName, "x")
 
     """
         updates: when we close the DB or evict a dirty page
