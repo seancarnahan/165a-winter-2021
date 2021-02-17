@@ -1,6 +1,7 @@
 from template.config import *
 from template.page import Page
 import sys
+import os
 
 
 class BufferPool:
@@ -16,15 +17,21 @@ class BufferPool:
     """
         input: [table index, type, PR Index, BP/TP index]
         - input should all be strings
-        output: true or false 
+        output: fileName
 
         sean
     """
-
-    def create_file(self, table_index: str, pageType: str, pr_index: str, _P_index: str):
+    def create_file(self, table_index: str, pageType: str, pr_index: str, _P_index: str):    
         fileName = "../disk/" + table_index + pageType + pr_index + _P_index + ".txt"
 
-        page = open(fileName, "x")
+        try: 
+            page = open(fileName, "x")
+        except Exception as e:
+            print(e)
+
+        page.close()
+
+        return fileName
 
     """
         updates: when we close the DB or evict a dirty page
@@ -32,9 +39,7 @@ class BufferPool:
         returns true if its able to update; else: false
 
         long
-        
     """
-
     def update_page(self):
         pass
 
@@ -78,6 +83,7 @@ class BufferPool:
 
     def remove_LRU_page(self):
         pass
+
 
 
 # buffer pool writes and reads to disk
