@@ -34,14 +34,12 @@ class BufferPool:
         return fileName
 
     """
-        updates: when we close the DB or evict a dirty page
-        updates the txt file
-        returns true if its able to update; else: false
-
-        long
+        input: filename (relative path?)
+        output: true or false based on succesful deletion
     """
-    def update_page(self):
+    def deleteFile(self, fileName: str):
         pass
+
 
     def read_from_disk(self, page_file_name):  # Gabriel
         """
@@ -65,9 +63,11 @@ class BufferPool:
 
     """
         input: page Object/ byteArray
-        return name of file created
+        updates: when we close the DB or evict a dirty page
+        updates the txt file
+        returns true if its able to update; else: false
 
-        sean
+        long
     """
 
     def write_to_disk(self):
