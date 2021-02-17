@@ -19,7 +19,7 @@ class BufferPool:
 
         #TODO
         self.dirtyBitTracker = [] #keeps track of number of transactions
-        
+
     """
     # return a PR to load into the bufferpool
     # talks to disk and then sets the pageRange of BufferPool
@@ -55,10 +55,10 @@ class BufferPool:
 
         sean
     """
-    def create_file(self, table_index: str, pageType: str, pr_index: str, _P_index: str):    
+    def create_file(self, table_index: str, pageType: str, pr_index: str, _P_index: str):
         fileName = "../disk/" + table_index + pageType + pr_index + _P_index + ".txt"
 
-        try: 
+        try:
             page = open(fileName, "x")
         except Exception as e:
             print(e)

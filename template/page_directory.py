@@ -52,7 +52,7 @@ class PageDirectory:
 
         #load pageRange into bufferPool if needed
         currPageRange = self.loadPageRange(locPRIndex)
-        
+
         #set indirection and encoding of base RID
         return currPageRange.insertTailRecord(record, recordLocation)
 

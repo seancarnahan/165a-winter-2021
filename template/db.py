@@ -52,7 +52,7 @@ class Database:
 
 
     """
-    input: 
+    input:
     output: loads to page to buffer pool
     """
     def fetchPage(self):
