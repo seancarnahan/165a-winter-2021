@@ -51,7 +51,7 @@ class PageDirectory:
         recordLocation = [locType, locPRIndex]
 
         #load pageRange into bufferPool if needed
-        currPageRange = loadPageRange(locPRIndex)
+        currPageRange = self.loadPageRange(locPRIndex)
         
         #set indirection and encoding of base RID
         return currPageRange.insertTailRecord(record, recordLocation)
@@ -60,7 +60,7 @@ class PageDirectory:
     #LocType, locPRIndex, locBPIndex or locTpIndex, locPhyPageIndex
     def getPhysicalPages(self, locType, locPRIndex, loc_PIndex, locPhyPageIndex):
         #load pageRange
-        pageRange = loadPageRange(locPRIndex)
+        pageRange = self.loadPageRange(locPRIndex)
 
         if locType == 1:
             #base Page
