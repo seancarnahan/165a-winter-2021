@@ -1,42 +1,46 @@
 from template.page_range import PageRange
 
-#PageDirectory = [PageRange()]
 class PageDirectory:
 
-    # def __init__(self, num_columns, bufferPool):
-    def __init__(self, num_columns):
-        #list of pageRanges
-        #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
+    #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
+    def __init__(self, num_columns, bufferPool, table_index):
         self.num_columns = num_columns
-        self.pageRanges = [PageRange(num_columns)]
-        self.currPageRangeIndex = 0
+        self.bufferPool = bufferPool
+        self.table_index = table_index
 
-        # self.bufferPool = bufferPool
-        
+    def loadPageRange(self, page_range_index):
+        curr_pagerange_index_in_bufferPool = self.bufferPool.getCurrPageRangeIndex(self.table_index)
+
+        if curr_pagerange_index_in_bufferPool != page_range_index:
+            self.bufferPool.requestNewPageRange(self.table_index, page_range_index)
+
+        return self.bufferPool.getPageRange()
 
     def insertBaseRecord(self, record):
         #create new RID location
         locType = 1
-        locPRIndex = self.currPageRangeIndex
+        locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_index)
         recordLocation = [locType, locPRIndex]
 
-        currPageRange = self.pageRanges[self.currPageRangeIndex]
+        currPageRange = self.bufferPool.getPageRange()
 
         if currPageRange.insertBaseRecord(record, recordLocation):
-            #successfully added a record into pageDir
+            #successfully added a record into pageRange that is loaded in buffer pool
             return True
         else:
-            #create new Page Range and add the record to the new Page Range
-            self.addNewPageRange()
-            currPageRange = self.pageRanges[self.currPageRangeIndex]
+            #Page Range is full: ask buffer Pool to initialize a new Page Range
+            self.bufferPool.addNewPageRange()
+            currPageRange = self.bufferPool.getPageRange()
 
             #reset PRIndex location
-            locPRIndex = self.currPageRangeIndex
+            locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_index)
             recordLocation = [locType, locPRIndex]
 
             currPageRange.insertBaseRecord(record, recordLocation)
             return True
 
+
+    #TODO: for merge -> we can get capacity of tail records, once it reaches its max then we can merge
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, baseRID, record):
         baseRIDLoc = self.getRecordLocation(baseRID)
@@ -46,27 +50,24 @@ class PageDirectory:
         locPRIndex = baseRIDLoc[1]
         recordLocation = [locType, locPRIndex]
 
-        #TODO: for merge -> we can get capacity of tail records, once it reaches its max then we can merge
-
-        #PageRange that has the baseRID
-        pageRange = self.pageRanges[locPRIndex]
-
+        #load pageRange into bufferPool if needed
+        currPageRange = loadPageRange(locPRIndex)
+        
         #set indirection and encoding of base RID
-        return pageRange.insertTailRecord(record, recordLocation)
+        return currPageRange.insertTailRecord(record, recordLocation)
 
-
-    def addNewPageRange(self):
-        self.pageRanges.append(PageRange(self.num_columns))
-        self.currPageRangeIndex += 1
 
     #LocType, locPRIndex, locBPIndex or locTpIndex, locPhyPageIndex
-    def getPhysicalPages(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
+    def getPhysicalPages(self, locType, locPRIndex, loc_PIndex, locPhyPageIndex):
+        #load pageRange
+        pageRange = loadPageRange(locPRIndex)
+
         if locType == 1:
             #base Page
-            return self.pageRanges[locPRIndex].basePages[locBPIndex]
+            return pageRange.basePages[loc_PIndex]
         else:
             #tail Page
-            return self.pageRanges[locPRIndex].tailPages[locBPIndex]
+            return pageRange.tailPages[loc_PIndex]
 
     #input: RID
     #output: # record location = [locType, locPRIndex, locBPIndex or locTPIndex, locPhyPageIndex]; EX: [1,23,45,6789]

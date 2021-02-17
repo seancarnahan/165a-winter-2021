@@ -3,16 +3,50 @@ from template.page import Page
 import sys
 import os
 
-
 class BufferPool:
     def __init__(self):
-        self.size = BUFFER_POOL_NUM_BASE_PAGES
-        self.TPsSize = BUFFER_POOL_NUM_TAIL_PAGES_PER_BASE
-        self.basePages = []
+        self.size = BUFFER_POOL_NUM_OF_PRs
+        self.pageRange = requestNewPageRange()
 
-        # key: index on self.basePages
-        # value: list of corresponding tail pages
-        self.tailPages = {}
+        #metadata to update
+        """
+        index: table_index
+        value: the available page_range_index for the next insert for the corresponding table
+
+        *DB initializes a value every time a new table gets created
+        """
+        self.currPageRangeIndexes = []
+
+        #TODO
+        self.dirtyBitTracker = [] #keeps track of number of transactions
+        
+    """
+    # return a PR to load into the bufferpool
+    # talks to disk and then sets the pageRange of BufferPool
+    :param fileName: path to the file in disk that holds the desired pageRange
+
+    #SHOULD RETURN A PAGE RANGE OBJECT
+    """
+    #TODO
+    def requestNewPageRange(self, table_index, page_range_index):
+        #if not Page Ranges have been created we should then create a new one
+        pass
+
+    #TODO
+    def addNewPageRange(self, table_index):
+        #create a new PageRange on disk
+        #load new PageRange into bufferpool
+        #notify PageDirectory that a new PageRange has been loaded?
+
+        self.currPageRangeIndexes[table_index] += 1
+        pass
+
+    def getPageRange(self,):
+        return self.pageRange
+
+    def getCurrPageRangeIndex(self, table_index):
+        return self.currPageRangeIndexes[table_index]
+
 
     """
         input: [table index, type, PR Index, BP/TP index]

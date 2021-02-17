@@ -9,12 +9,6 @@ class PageRange:
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0
 
-        #keeps track of which base pages are in memory
-        self.memoryTracker = []
-
-        #
-        self.dirtyBitTracker = []
-
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]
 
