@@ -6,6 +6,7 @@ class Database:
     def __init__(self):
         self.tables = []
         self.bufferPool = BufferPool()
+        self.next_table_index = 0
 
     def open(self, path):
         pass
@@ -21,8 +22,12 @@ class Database:
     """
 
     def create_table(self, name, num_columns, key):
-        table = Table(name, num_columns, key, self.bufferPool)
+        table = Table(name, num_columns, key, self.bufferPool, next_table_index)
         self.tables.append(table)
+
+        self.next_table_index += 1
+        self.bufferPool.currPageRangeIndexes.append(0)
+
         return table
 
     """
@@ -47,7 +52,7 @@ class Database:
 
 
     """
-    input: 
+    input:
     output: loads to page to buffer pool
     """
     def fetchPage(self):

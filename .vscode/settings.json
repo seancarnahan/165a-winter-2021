@@ -1,4 +1,3 @@
 {
     "editor.fontSize": 11,
-    "python.linting.pylintPath": "${workspaceFolder}\\venv\\Scripts\\pylint.exe",
 }

@@ -8,7 +8,7 @@ class Page:
     def __init__(self):
         self.num_records = 0 #max: 1000
         self.data = bytearray()
-    
+
     #if num_records < 1000 return true
     #if num_records >= 1000 return false
     def has_capacity(self):
@@ -19,23 +19,23 @@ class Page:
 
     #input: integer
     #output: if page still has room return true, else return false
-    #adds an integer to a page 
+    #adds an integer to a page
     def write(self, value):
         if self.has_capacity():
             byteArray = Page().integerToBytes(value)
 
             self.data += byteArray
-            self.num_records += 1  
+            self.num_records += 1
 
             return True #Successfully added record to page
         else:
-            return False #Failed to add record to page 
+            return False #Failed to add record to page
 
     #input: int index from 0 - 1023999
     #output: integer value of that record
     def getRecord(self, index):
         x1, x2 = Page().getRecordIndexes(index)
-    
+
         try:
             return Page().hexToInt(Page().bytesToHex(self.data[x1: x2]))
         except ValueError:
@@ -52,7 +52,7 @@ class Page:
         byteArray = Page().integerToBytes(newIntVal)
         self.data[x1: x2] = byteArray
         return True
-        
+
     #input: index from 0 - 999
     #output: a list [x1,x2] (inclusive,exclusive)
     #indexes will allow you to retreive a slice from self.data
@@ -72,7 +72,7 @@ class Page:
     @staticmethod
     def bytesToHex(bytesArray):
         return bytesArray.hex()
-    
+
     #input a hex string
     #output: integer
     @staticmethod

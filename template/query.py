@@ -5,7 +5,7 @@ from template.config import *
 
 class Query:
     """
-    # Creates a Query object that can perform different queries on the specified table 
+    # Creates a Query object that can perform different queries on the specified table
     Queries that fail must return False
     Queries that succeed should return the result or True
     Any query that crashes (due to exceptions) should return False
@@ -92,8 +92,8 @@ class Query:
             return False
 
     """
-    :param start_range: int         # Start of the key range to aggregate 
-    :param end_range: int           # End of the key range to aggregate 
+    :param start_range: int         # Start of the key range to aggregate
+    :param end_range: int           # End of the key range to aggregate
     :param aggregate_columns: int  # Index of desired column to aggregate
     # this function is only called on the primary key.
     # Returns the summation of the given range upon success
@@ -129,5 +129,3 @@ class Query:
             u = self.update(key, *updated_columns)
             return u
         return False
-
-

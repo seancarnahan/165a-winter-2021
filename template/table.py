@@ -13,12 +13,13 @@ class Table:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-    def __init__(self, name, num_columns, key, bufferPool):
+    def __init__(self, name, num_columns, key, bufferPool, table_index):
         self.name = name
         self.key = key
         self.num_columns = num_columns
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_all_columns, bufferPool)
+        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_index)
+        self.table_index = table_index
         self.index = Index(self)
         self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
@@ -28,14 +29,16 @@ class Table:
     #Input: RID
     #Output: Record Object with RID added
     def getRecord(self, RID):
-        locType, locPRIndex, lock_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
-        pageRange = self.page_directory.pageRanges[locPRIndex]
+        locType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
+
+        #loadd page range into buffer pool
+        pageRange = self.page_directory.loadPageRange(locPRIndex)
 
         physicalPages = None
         if locType == 1:
-            physicalPages = pageRange.basePages[lock_PIndex]
+            physicalPages = pageRange.basePages[loc_PIndex]
         elif locType == 2:
-            physicalPages = pageRange.tailPages[lock_PIndex]
+            physicalPages = pageRange.tailPages[loc_PIndex]
 
         indirection = physicalPages.physicalPages[INDIRECTION_COLUMN].getRecord(locPhyPageIndex)
         RID = physicalPages.physicalPages[RID_COLUMN].getRecord(locPhyPageIndex)
