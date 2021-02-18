@@ -23,7 +23,7 @@ class Record:
 
     #input: record location
     #output: record location in integer form; #example: 123456789
-    def getNewRID(self, locType, locPRIndex, locBPIndex, locPhyPageIndex):
-        num = locType*(10**8) + locPRIndex*(10**6) + locBPIndex*(10**4) + locPhyPageIndex
+    def getNewRID(self, recordType, locPRIndex, locBPIndex, locPhyPageIndex):
+        num = recordType*(10**8) + locPRIndex*(10**6) + locBPIndex*(10**4) + locPhyPageIndex
 
         return num

@@ -3,25 +3,25 @@ from template.page_range import PageRange
 class PageDirectory:
 
     #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
-    def __init__(self, num_columns, bufferPool, table_index):
+    def __init__(self, num_columns, bufferPool, table_name):
         self.num_columns = num_columns
         self.bufferPool = bufferPool
-        self.table_index = table_index
+        self.table_name = table_name
 
     def loadPageRange(self, page_range_index):
-        curr_pagerange_index_in_bufferPool = self.bufferPool.getCurrPageRangeIndex(self.table_index)
+        curr_pagerange_index_in_bufferPool = self.bufferPool.getCurrPageRangeIndex(self.table_name)
 
         if curr_pagerange_index_in_bufferPool != page_range_index:
-            self.bufferPool.requestPageRange(self.table_index, page_range_index)
+            self.bufferPool.requestPageRange(self.table_name, page_range_index)
 
         # get_page_range_from_buffer_pool
         return self.bufferPool.getPageRange()
 
     def insertBaseRecord(self, record):
         #create new RID location
-        locType = 1
-        locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_index)
-        recordLocation = [locType, locPRIndex]
+        recordType = 1
+        locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)
+        recordLocation = [recordType, locPRIndex]
 
         currPageRange = self.bufferPool.getPageRange()
 
@@ -34,8 +34,8 @@ class PageDirectory:
             currPageRange = self.bufferPool.getPageRange()
 
             #reset PRIndex location
-            locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_index)
-            recordLocation = [locType, locPRIndex]
+            locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)
+            recordLocation = [recordType, locPRIndex]
 
             currPageRange.insertBaseRecord(record, recordLocation)
             return True
@@ -47,9 +47,9 @@ class PageDirectory:
         baseRIDLoc = self.getRecordLocation(baseRID)
 
         #create new RID location
-        locType = 2
+        recordType = 2
         locPRIndex = baseRIDLoc[1]
-        recordLocation = [locType, locPRIndex]
+        recordLocation = [recordType, locPRIndex]
 
         #load pageRange into bufferPool if needed
         currPageRange = self.loadPageRange(locPRIndex)
@@ -58,12 +58,12 @@ class PageDirectory:
         return currPageRange.insertTailRecord(record, recordLocation)
 
 
-    #LocType, locPRIndex, locBPIndex or locTpIndex, locPhyPageIndex
-    def getPhysicalPages(self, locType, locPRIndex, loc_PIndex, locPhyPageIndex):
+    #recordType, locPRIndex, locBPIndex or locTpIndex, locPhyPageIndex
+    def getPhysicalPages(self, recordType, locPRIndex, loc_PIndex, locPhyPageIndex):
         #load pageRange
         pageRange = self.loadPageRange(locPRIndex)
 
-        if locType == 1:
+        if recordType == 1:
             #base Page
             return pageRange.basePages[loc_PIndex]
         else:
@@ -71,7 +71,7 @@ class PageDirectory:
             return pageRange.tailPages[loc_PIndex]
 
     #input: RID
-    #output: # record location = [locType, locPRIndex, locBPIndex or locTPIndex, locPhyPageIndex]; EX: [1,23,45,6789]
+    #output: # record location = [recordType, locPRIndex, locBPIndex or locTPIndex, locPhyPageIndex]; EX: [1,23,45,6789]
     # CONSIDER: using Bitwise operations to improve speed
     def getRecordLocation(self, RID):
         locPhyPageIndex = RID % 10000
@@ -81,5 +81,5 @@ class PageDirectory:
         locPRIndex = RID % 100
         RID //= 100
 
-        #RID => locType
+        #RID => recordType
         return [RID, locPRIndex, lock_PIndex, locPhyPageIndex]
