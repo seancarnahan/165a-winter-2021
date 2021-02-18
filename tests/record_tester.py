@@ -24,12 +24,12 @@ class RecordTester(unittest.TestCase):
         self.assertEqual(self.record.columns, self.columns)
 
     def test_getNewRID(self):
-        locType = 1
+        recordType = 1
         locPRIndex = 23
         locBPIndex = 45
         locPhyPageIndex = 6789
 
-        RID = self.record.getNewRID(locType, locPRIndex, locBPIndex, locPhyPageIndex)
+        RID = self.record.getNewRID(recordType, locPRIndex, locBPIndex, locPhyPageIndex)
 
         self.assertEqual(RID, 123456789)
 

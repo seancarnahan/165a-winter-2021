@@ -3,13 +3,13 @@ from template.config import *
 
 class PageRange:
 
-    def __init__(self, num_columns):
+    def __init__(self, num_columns, page_range_index, table_name):
         self.num_columns = num_columns
         self.maxNumOfBasePages = self.getPageRangeCapacity()
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0
-        #self.id = index of the page range -> need the 5th Page Range
-        #self.tableName = tableName
+        self.id = page_range_index
+        self.tableName = table_name
 
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]
@@ -17,7 +17,7 @@ class PageRange:
         #list of type TailPage, when one tail page runs out add a new on to the list
         self.tailPages = [PhysicalPages(self.num_columns)]
 
-    # record location = [locType, locPRIndex]
+    # record location = [recordType, locPRIndex]
     def insertBaseRecord(self, record, recordLocation):
         currBasePage = self.basePages[self.currBasePageIndex]
 
@@ -43,7 +43,7 @@ class PageRange:
                 #there is no more room in Page Range, need to tell PageDir to make a new one
                 return False #FAILED to insert a record into page Range
 
-    # record location = [locType, locPRIndex]
+    # record location = [recordType, locPRIndex]
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, record, recordLocation):
         currTailPage = self.tailPages[self.currTailPageIndex]

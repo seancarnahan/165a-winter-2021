@@ -6,9 +6,10 @@ class Database:
     def __init__(self):
         self.tables = []
         self.bufferPool = BufferPool()
-        self.next_table_index = 0
+        self.path_to_db_name = ""
 
     def open(self, path):
+        self.path_to_db_name = path
         pass
 
     def close(self):
@@ -20,13 +21,11 @@ class Database:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-
     def create_table(self, name, num_columns, key):
-        table = Table(name, num_columns, key, self.bufferPool, next_table_index)
+        table = Table(name, num_columns, key, self.bufferPool)
         self.tables.append(table)
 
-        self.next_table_index += 1
-        self.bufferPool.currPageRangeIndexes.append(0)
+        self.bufferPool.currPageRangeIndexes[name] = 0
 
         return table
 

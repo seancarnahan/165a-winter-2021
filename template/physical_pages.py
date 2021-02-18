@@ -10,7 +10,7 @@ class PhysicalPages:
         for _ in range(num_columns):
             self.physicalPages.append(Page())
 
-    # record location = [locType, locPRIndex, locBPIndex or locTPIndex]
+    # record location = [recordType, locPRIndex, locBPIndex or locTPIndex]
     #returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation):
         #set last item of recordLocation
