@@ -5,13 +5,15 @@ import os
 
 class BufferPool:
 
-    def __init__(self):
+    def __init__(self, path_to_db_name):
         self.size = BUFFER_POOL_NUM_OF_PRs
         self.pageRanges = [] #/ list[PageRange(page_range_index, table_name)]
-        #pass down db name
+        self.path_to_db_name = path_to_db_name
 
         #metadata to update
         """
+        this is used for inserts to know the next available pageRange in a table
+
         key: table_name
         value: the available page_range_index for the next insert for the corresponding table
 
@@ -23,68 +25,110 @@ class BufferPool:
         self.dirtyBitTracker = [] #keeps track of number of transactions
 
     """
-    this gets called when the desired page range is not in the bufferPool
-    so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
-    then go to disk read in a Page Range Object based off the params
-    then add this new pageRange to the bufferpool
+    1. checks to see if the pageRange is in the table, if its not then it triggers requestPageRange
+    2. Once the correct PageRange is loaded then it returns the Page Range from BufferPool
+
+    # returns the desired PageRange from BufferPool
+    * might run into async/await issue here
+    """
+    def loadPageRange(self, table_name, page_range_index):
+        isPageRangeInBP = False
+
+        #check if pageRange is in BufferPool
+        for i in range(len(self.pageRanges)):
+            page_range = self.pageRanges[i]
+
+            if page_range.tableName == table_name and page_range.id == page_range_index:
+                isPageRangeInBP = True
+                break
+
+        #PageRange is not currently in BufferPool
+        if not isPageRangeInBP:
+            #request that desired PageRange gets added to BufferPool
+            self.bufferPool.requestPageRange(self.table_name, page_range_index)
+
+        #desired PageRange should be in BufferPool at this point
+        return self.bufferPool.get_page_range_from_buffer_pool(
+            self.table_name,
+            page_range_index
+        )
+
+    """
+    # this gets called only when the desired page range is not in the bufferPool
+    # so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
+    # then go to disk read in a Page Range Object based off the params
+    # then add this new pageRange to the bufferpool
 
     # return a Page Range to load into the bufferpool
     # talks to disk and then sets the pageRange of BufferPool
-    :param fileName: path to the file in disk that holds the desired pageRange
+    :param table_name: name of the table
+    :param page_range_index: index of the page range in table
 
-    return null
+    # don't need to return anything
+    # if PageRange is not in disk then throw error
+    # might utilize get_path()
 
-    long
+    # TODO: Long
     """
-    #TODO
     def requestPageRange(self, table_name, page_range_index):
-        #if not Page Ranges have been created we should then create a new one
         pass
 
 
+    """
+    # This is called when PageRange they are trying to add a Base Record to is full
+    # This will only be called during inserts
 
+    #create a new PageRange on disk
+    #load new PageRange into bufferpool -> might want to call requestPageRange
+
+    #TODO: Long
+    """
     #TODO
-    """
-    brand new PageRange -> used for inserts
-    """
     def addNewPageRange(self, table_name):
-        #create a new PageRange on disk
-        #load new PageRange into bufferpool
-        #notify PageDirectory that a new PageRange has been loaded?
-
         self.currPageRangeIndexes[table_name] += 1
         pass
 
     """
-    output: str relative path to file
+    :param db_name: name of the DB
+    :param table_name: name of the table
+    :param page_range_index: index of the page range in table
 
-    "../disk/db_name/table_name/page_range_name.p"
+    output: creates str relative path to file in the following format:
+        "../disk/db_name/table_name/page_range_name_with_index.p"
 
-    long
+    TODO: long
     """
     def get_path(self, db_name, table_name, page_range_index):
         pass
 
     """
-        assume the correct page is already in buffer pool
-        output: PageRange()
+    # assume the correct PageRange is already in buffer pool
+    # returns the PageRange from bufferPool
 
-        long
+    :param table_name: name of the table
+    :param page_range_index: index of the page range in table
+    # output: PageRange()
+
+    TODO: long
     """
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
         pass
 
-    # def getPageRange(self):
-    #     return self.pageRange
+    """
+    :param table_name: name of the table
 
+    :return the latest PageRange created for the table
+    """
     def getCurrPageRangeIndex(self, table_name):
         return self.currPageRangeIndexes[table_name]
 
 
     """
-        input: [table index, type, PR Index, BP/TP index]
-        - input should all be strings
-        output: fileName
+    SUBJECT TO CHANGE
+
+    input: [table index, type, PR Index, BP/TP index]
+    - input should all be strings
+    output: fileName
     """
     def create_file(self, table_name: str, pageType: str, pr_index: str, _P_index: str):
         #this method needs to change
@@ -100,8 +144,8 @@ f
         return fileName
 
     """
-        input: filename (relative path?)
-        output: true or false based on succesful deletion
+    input: filename (relative path?)
+    output: true or false based on succesful deletion
     """
     def deleteFile(self, fileName: str):
         pass
@@ -140,11 +184,11 @@ f
         pass
 
     """
-        - determine which page in the buffer pool to evict
-        - check if the evictable page is dirty, if so update the page in disk
-        - pinning and unpinning counters -> might have to add that to the Page
+    - determine which page in the buffer pool to evict
+    - check if the evictable page is dirty, if so update the page in disk
+    - pinning and unpinning counters -> might have to add that to the Page
 
-        aly
+    aly
     """
     def remove_LRU_page(self):
         pass

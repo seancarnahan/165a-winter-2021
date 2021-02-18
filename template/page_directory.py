@@ -8,60 +8,69 @@ class PageDirectory:
         self.bufferPool = bufferPool
         self.table_name = table_name
 
-    def loadPageRange(self, page_range_index):
-        curr_pagerange_index_in_bufferPool = self.bufferPool.getCurrPageRangeIndex(self.table_name)
-
-        if curr_pagerange_index_in_bufferPool != page_range_index:
-            self.bufferPool.requestPageRange(self.table_name, page_range_index)
-
-        # get_page_range_from_buffer_pool
-        return self.bufferPool.getPageRange()
-
+    #returns True when its a success
     def insertBaseRecord(self, record):
-        #create new RID location
+        #record type is basePage
         recordType = 1
+
+        #get available pageRange for insert
         locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)
+
+        #initialize record location
         recordLocation = [recordType, locPRIndex]
 
-        currPageRange = self.bufferPool.getPageRange()
+        #points to the correct PageRange in BufferPool
+        currPageRange = self.bufferPool.loadPageRange(table_name, locPRIndex)
 
+        #attempt to add record PageRange
         if currPageRange.insertBaseRecord(record, recordLocation):
             #successfully added a record into pageRange that is loaded in buffer pool
             return True
         else:
             #Page Range is full: ask buffer Pool to initialize a new Page Range
             self.bufferPool.addNewPageRange()
-            currPageRange = self.bufferPool.getPageRange()
 
-            #reset PRIndex location
+            #get the new Page Range Index
             locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)
+
+            #reset record location
             recordLocation = [recordType, locPRIndex]
 
+            #points to the correct PageRange in BufferPool
+            currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
+
+            #Recursive -> attempt to add record to PageRange
             currPageRange.insertBaseRecord(record, recordLocation)
+
             return True
 
 
     #TODO: for merge -> we can get capacity of tail records, once it reaches its max then we can merge
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, baseRID, record):
+
+        #List of elements that make up the RID
         baseRIDLoc = self.getRecordLocation(baseRID)
 
-        #create new RID location
+        #record type is set to Tail
         recordType = 2
+
+        #get page range index from baseRIDLoc
         locPRIndex = baseRIDLoc[1]
+
+        #initialize record location
         recordLocation = [recordType, locPRIndex]
 
         #load pageRange into bufferPool if needed
-        currPageRange = self.loadPageRange(locPRIndex)
+        currPageRange = self.bufferPool.loadPageRange(selftable_name, locPRIndex)
 
-        #set indirection and encoding of base RID
+        #try to add record to PageRange
         return currPageRange.insertTailRecord(record, recordLocation)
 
 
-    #recordType, locPRIndex, locBPIndex or locTpIndex, locPhyPageIndex
     def getPhysicalPages(self, recordType, locPRIndex, loc_PIndex, locPhyPageIndex):
         #load pageRange
-        pageRange = self.loadPageRange(locPRIndex)
+        pageRange = self.loadPageRange(self.table_name, locPRIndex)
 
         if recordType == 1:
             #base Page
@@ -72,7 +81,6 @@ class PageDirectory:
 
     #input: RID
     #output: # record location = [recordType, locPRIndex, locBPIndex or locTPIndex, locPhyPageIndex]; EX: [1,23,45,6789]
-    # CONSIDER: using Bitwise operations to improve speed
     def getRecordLocation(self, RID):
         locPhyPageIndex = RID % 10000
         RID //= 10000
