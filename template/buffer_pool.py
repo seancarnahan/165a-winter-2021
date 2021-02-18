@@ -6,7 +6,8 @@ import os
 class BufferPool:
     def __init__(self):
         self.size = BUFFER_POOL_NUM_OF_PRs
-        self.pageRange = requestNewPageRange()
+        self.pageRanges = [] #/ list[PageRange()]
+        #pass down db name
 
         #metadata to update
         """
@@ -15,24 +16,36 @@ class BufferPool:
 
         *DB initializes a value every time a new table gets created
         """
-        self.currPageRangeIndexes = []
+        self.currPageRangeIndexes = [] #this should be a map
 
         #TODO
         self.dirtyBitTracker = [] #keeps track of number of transactions
 
     """
-    # return a PR to load into the bufferpool
+    this gets called when the desired page range is not in the bufferPool
+    so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
+    then go to disk read in a Page Range Object based off the params
+    then add this new pageRange to the bufferpool
+
+    # return a Page Range to load into the bufferpool
     # talks to disk and then sets the pageRange of BufferPool
     :param fileName: path to the file in disk that holds the desired pageRange
 
-    #SHOULD RETURN A PAGE RANGE OBJECT
+    return null
+
+    long
     """
     #TODO
-    def requestNewPageRange(self, table_index, page_range_index):
+    def requestPageRange(self, table_index, page_range_index):
         #if not Page Ranges have been created we should then create a new one
         pass
 
+
+
     #TODO
+    """
+    brand new PageRange -> used for inserts
+    """
     def addNewPageRange(self, table_index):
         #create a new PageRange on disk
         #load new PageRange into bufferpool
@@ -41,8 +54,25 @@ class BufferPool:
         self.currPageRangeIndexes[table_index] += 1
         pass
 
-    def getPageRange(self,):
-        return self.pageRange
+    """
+    output: str relative path to file
+
+    long
+    """
+    def get_path(self, db_name, table_name, page_range_index):
+        pass
+
+    """
+        assume the correct page is already in buffer pool
+        output: PageRange()
+
+        long
+    """
+    def get_page_range_from_buffer_pool(self, table_name, page_range_index):
+        pass
+
+    # def getPageRange(self):
+    #     return self.pageRange
 
     def getCurrPageRangeIndex(self, table_index):
         return self.currPageRangeIndexes[table_index]
@@ -64,7 +94,7 @@ class BufferPool:
             print(e)
 
         page.close()
-
+f
         return fileName
 
     """
@@ -75,7 +105,7 @@ class BufferPool:
         pass
 
 
-    def read_from_disk(self, page_file_name):  # Gabriel
+    def read_from_disk(self, table_index, page_range_index):  # Gabriel
         """
         Read data from disk
 
@@ -104,7 +134,7 @@ class BufferPool:
         long
     """
 
-    def write_to_disk(self):
+    def write_to_disk(self, table_index, page_range_index):
         pass
 
     """
@@ -114,7 +144,6 @@ class BufferPool:
 
         aly
     """
-
     def remove_LRU_page(self):
         pass
 

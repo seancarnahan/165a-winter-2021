@@ -12,8 +12,9 @@ class PageDirectory:
         curr_pagerange_index_in_bufferPool = self.bufferPool.getCurrPageRangeIndex(self.table_index)
 
         if curr_pagerange_index_in_bufferPool != page_range_index:
-            self.bufferPool.requestNewPageRange(self.table_index, page_range_index)
+            self.bufferPool.requestPageRange(self.table_index, page_range_index)
 
+        # get_page_range_from_buffer_pool
         return self.bufferPool.getPageRange()
 
     def insertBaseRecord(self, record):

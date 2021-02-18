@@ -8,6 +8,8 @@ class PageRange:
         self.maxNumOfBasePages = self.getPageRangeCapacity()
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0
+        #self.id = index of the page range -> need the 5th Page Range
+        #self.tableName = tableName
 
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]
