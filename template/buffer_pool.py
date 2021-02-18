@@ -4,6 +4,7 @@ import sys
 import os
 
 class BufferPool:
+
     def __init__(self):
         self.size = BUFFER_POOL_NUM_OF_PRs
         self.pageRanges = [] #/ list[PageRange()]
@@ -56,6 +57,8 @@ class BufferPool:
 
     """
     output: str relative path to file
+
+    "../disk/db_name/table_name/page_range_name.p"
 
     long
     """
