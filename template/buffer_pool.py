@@ -77,7 +77,9 @@ class BufferPool:
     """
 
     def requestPageRange(self, table_name, page_range_index):
-        pass
+        if len(self.pageRanges) == BUFFER_POOL_NUM_OF_PRs:
+            remove_LRU_page()
+        page_range = read_from_disk(table_index, page_range_index)
 
     """
     # This is called when PageRange they are trying to add a Base Record to is full
@@ -106,7 +108,9 @@ class BufferPool:
     """
 
     def get_path(self, db_name, table_name, page_range_index):
-        pass
+        path = "../disk/" + str(db_name) + "/" + str(table_name) + "/" + str(
+            page_range_index) + ".p"
+        return path
 
     """
     # assume the correct PageRange is already in buffer pool
@@ -120,7 +124,10 @@ class BufferPool:
     """
 
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
-        pass
+        for table in self.pageRanges:
+            if table.tableName == table_name:
+                return table
+
 
     """
     :param table_name: name of the table
