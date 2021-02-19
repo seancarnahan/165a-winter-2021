@@ -1,14 +1,20 @@
 from template.table import Table
 from template.buffer_pool import BufferPool
 
+
+class TableExistsError(Exception):
+    def __init__(self, table):
+        super().__init__("Table exists: {0}".format(table))
+
 class Database:
 
     def __init__(self):
         self.tables = []
         self.bufferPool = BufferPool()
-        self.next_table_index = 0
 
     def open(self, path):
+        self.bufferPool.db_path = path
+        self.bufferPool.createDatabaseDirectory()
         pass
 
     def close(self):
@@ -20,13 +26,15 @@ class Database:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-
     def create_table(self, name, num_columns, key):
-        table = Table(name, num_columns, key, self.bufferPool, next_table_index)
-        self.tables.append(table)
+        try:
+            self.bufferPool.createTableDirectory(name)
+        except FileExistsError:
+            raise TableExistsError(name)
 
-        self.next_table_index += 1
-        self.bufferPool.currPageRangeIndexes.append(0)
+        table = Table(name, num_columns, key, self.bufferPool)
+        self.tables.append(table)
+        self.bufferPool.currPageRangeIndexes[name] = 0
 
         return table
 
@@ -38,6 +46,7 @@ class Database:
         for table in self.tables:
             if table.name == name:
                 self.tables.remove(table)
+                self.bufferPool.deleteTableDirectory(name)
 
     """
     # Returns table with the passed name

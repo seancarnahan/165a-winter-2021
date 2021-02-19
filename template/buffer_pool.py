@@ -1,170 +1,188 @@
 from template.config import *
-from template.page import Page
+from template.page_range import PageRange
+from shutil import rmtree # used to remove directories
 import sys
 import os
+import pickle
+
+
 
 class BufferPool:
 
     def __init__(self):
         self.size = BUFFER_POOL_NUM_OF_PRs
-        self.pageRanges = [] #/ list[PageRange()]
-        #pass down db name
+        self.pageRanges = []  # / list[PageRange(page_range_index, table_name)]
+        self.db_path = ""
 
-        #metadata to update
+        # metadata to update
         """
-        index: table_index
+        this is used for inserts to know the next available pageRange in a table
+
+        key: table_name
         value: the available page_range_index for the next insert for the corresponding table
 
         *DB initializes a value every time a new table gets created
         """
-        self.currPageRangeIndexes = [] #this should be a map
+        self.currPageRangeIndexes = {}
 
-        #TODO
-        self.dirtyBitTracker = [] #keeps track of number of transactions
+        # TODO
+        self.dirtyBitTracker = []  # keeps track of number of transactions
 
     """
-    this gets called when the desired page range is not in the bufferPool
-    so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
-    then go to disk read in a Page Range Object based off the params
-    then add this new pageRange to the bufferpool
+    1. checks to see if the pageRange is in the table, if its not then it triggers requestPageRange
+    2. Once the correct PageRange is loaded then it returns the Page Range from BufferPool
+
+    # returns the desired PageRange from BufferPool
+    * might run into async/await issue here
+    """
+
+    def loadPageRange(self, table_name, page_range_index):
+        isPageRangeInBP = False
+
+        # check if pageRange is in BufferPool
+        for i in range(len(self.pageRanges)):
+            page_range = self.pageRanges[i]
+
+            if page_range.tableName == table_name and page_range.id == page_range_index:
+                isPageRangeInBP = True
+                break
+
+        # PageRange is not currently in BufferPool
+        if not isPageRangeInBP:
+            # request that desired PageRange gets added to BufferPool
+            self.bufferPool.requestPageRange(self.table_name, page_range_index)
+
+        # desired PageRange should be in BufferPool at this point
+        return self.bufferPool.get_page_range_from_buffer_pool(
+            self.table_name,
+            page_range_index
+        )
+
+    """
+    # this gets called only when the desired page range is not in the bufferPool
+    # so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
+    # then go to disk read in a Page Range Object based off the params
+    # then add this new pageRange to the bufferpool
 
     # return a Page Range to load into the bufferpool
     # talks to disk and then sets the pageRange of BufferPool
-    :param fileName: path to the file in disk that holds the desired pageRange
+    :param table_name: name of the table
+    :param page_range_index: index of the page range in table
 
-    return null
+    # don't need to return anything
+    # if PageRange is not in disk then throw error
+    # might utilize get_path()
 
-    long
+    # TODO: Long
     """
-    #TODO
-    def requestPageRange(self, table_index, page_range_index):
-        #if not Page Ranges have been created we should then create a new one
-        pass
 
-
-
-    #TODO
-    """
-    brand new PageRange -> used for inserts
-    """
-    def addNewPageRange(self, table_index):
-        #create a new PageRange on disk
-        #load new PageRange into bufferpool
-        #notify PageDirectory that a new PageRange has been loaded?
-
-        self.currPageRangeIndexes[table_index] += 1
+    def requestPageRange(self, table_name, page_range_index):
         pass
 
     """
-    output: str relative path to file
+    # This is called when PageRange they are trying to add a Base Record to is full
+    # This will only be called during inserts
 
-    "../disk/db_name/table_name/page_range_name.p"
+    #create a new PageRange on disk
+    #load new PageRange into bufferpool -> might want to call requestPageRange
 
-    long
+    #TODO: Long
     """
+
+    # TODO
+    def addNewPageRange(self, table_name):
+        self.currPageRangeIndexes[table_name] += 1
+        pass
+
+    """
+    :param db_name: name of the DB
+    :param table_name: name of the table
+    :param page_range_index: index of the page range in table
+
+    output: creates str relative path to file in the following format:
+        "../disk/db_name/table_name/page_range_name_with_index.p"
+
+    TODO: long
+    """
+
     def get_path(self, db_name, table_name, page_range_index):
         pass
 
     """
-        assume the correct page is already in buffer pool
-        output: PageRange()
+    # assume the correct PageRange is already in buffer pool
+    # returns the PageRange from bufferPool
 
-        long
+    :param table_name: name of the table
+    :param page_range_index: index of the page range in table
+    # output: PageRange()
+
+    TODO: long
     """
+
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
         pass
 
-    # def getPageRange(self):
-    #     return self.pageRange
+    """
+    :param table_name: name of the table
 
-    def getCurrPageRangeIndex(self, table_index):
-        return self.currPageRangeIndexes[table_index]
+    :return the latest PageRange created for the table
+    """
 
+    def getCurrPageRangeIndex(self, table_name):
+        return self.currPageRangeIndexes[table_name]
 
     """
-        input: [table index, type, PR Index, BP/TP index]
-        - input should all be strings
-        output: fileName
-
-        sean
+    input: filename (relative path?)
+    output: true or false based on succesful deletion
     """
-    def create_file(self, table_index: str, pageType: str, pr_index: str, _P_index: str):
-        fileName = "../disk/" + table_index + pageType + pr_index + _P_index + ".txt"
 
-        try:
-            page = open(fileName, "x")
-        except Exception as e:
-            print(e)
-
-        page.close()
-f
-        return fileName
-
-    """
-        input: filename (relative path?)
-        output: true or false based on succesful deletion
-    """
     def deleteFile(self, fileName: str):
         pass
 
-
-    def read_from_disk(self, table_index, page_range_index):  # Gabriel
+    def read_from_disk(self, table_name: str, page_range_index: int):  # Gabriel
         """
-        Read data from disk
-
-        :param page_file_name: string       # The file name corresponding to the page we want to load
+        Read Page Range from disk and bring into memory
         """
 
-        # I don't think we decided on a file format so this code is mainly temporary
-
-        page = Page()
-        with open(page_file_name, 'r') as fs:
-            numRecords = int(fs.readline())
-            data = bytearray()
-            data += fs.read()
-
-        page.num_records = numRecords
-        page.data = data
-
+        file_path = self.get_path(self.db_name, table_name, page_range_index)
+        fs = open(file_path, "rb")
+        page = pickle.load(fs)
+        fs.close()
         return page
 
     """
-        input: page Object/ byteArray
+        input: Page Range Object
         updates: when we close the DB or evict a dirty page
         updates the txt file
         returns true if its able to update; else: false
-
-        long
     """
 
-    def write_to_disk(self, table_index, page_range_index):
-        pass
+    def write_to_disk(self, page_range: PageRange):
+        table_name = page_range.table_name
+        path = self.get_path(self.db_name, table_name, page_range.index)
+        fs = open(path, "wb")
+        pickle.dump(page_range, fs)
+        fs.close()
 
     """
-        - determine which page in the buffer pool to evict
-        - check if the evictable page is dirty, if so update the page in disk
-        - pinning and unpinning counters -> might have to add that to the Page
+    - determine which page in the buffer pool to evict
+    - check if the evictable page is dirty, if so update the page in disk
+    - pinning and unpinning counters -> might have to add that to the Page
 
-        aly
+    aly
     """
+
     def remove_LRU_page(self):
         pass
 
+    def createTableDirectory(self, table_name):
+        full_path = os.path.join(self.db_path, table_name)
+        os.mkdir(full_path)
 
+    def deleteTableDirectory(self, table_name):
+        full_path = os.path.join(self.db_path, table_name)
+        rmtree(full_path, ignore_errors=True)
 
-# buffer pool writes and reads to disk
-# pageDir keeps trask of our structure of disk ???
-
-"""
-    size = BUFFER_POOL_SIZE
-    path = None
-    # active pages loaded in bufferpool
-    page_directories = {}
-    # Pop the least freuqently used page
-    tstamp_directories = {}
-    tps = {}  # Key: (table_name, col_index, page_range_index), value: tps
-    latest_tail = {}  # Key: (table_name, col_index, page_range_index), value: lastest tail page id of specified page range
-    def __init__(self):
-        # print("Init BufferPool. Do Nothing ...")
-        pass
-"""
+    def createDatabaseDirectory(self):
+        if not os.path.exists(self.db_path):
+            os.mkdir(self.db_path)

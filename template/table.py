@@ -13,13 +13,12 @@ class Table:
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
-    def __init__(self, name, num_columns, key, bufferPool, table_index):
-        self.name = name
+    def __init__(self, table_name, num_columns, key, bufferPool):
+        self.table_name = table_name
         self.key = key
         self.num_columns = num_columns
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_index)
-        self.table_index = table_index
+        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
         self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
@@ -29,15 +28,15 @@ class Table:
     #Input: RID
     #Output: Record Object with RID added
     def getRecord(self, RID):
-        locType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
+        recordType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
 
         #loadd page range into buffer pool
         pageRange = self.page_directory.loadPageRange(locPRIndex)
 
         physicalPages = None
-        if locType == 1:
+        if recordType == 1:
             physicalPages = pageRange.basePages[loc_PIndex]
-        elif locType == 2:
+        elif recordType == 2:
             physicalPages = pageRange.tailPages[loc_PIndex]
 
         indirection = physicalPages.physicalPages[INDIRECTION_COLUMN].getRecord(locPhyPageIndex)
@@ -126,14 +125,14 @@ class Table:
 
         #step 4: if there is a prevTail, then set the prev tail record to point to the new tail record
         if baseRecord.indirection != 0:
-            locType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(prevUpdateRecord.RID)
-            prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locTPIndex, locPhyPageIndex).physicalPages
+            recordType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(prevUpdateRecord.RID)
+            prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locTPIndex, locPhyPageIndex).physicalPages
             prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
             prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
         #Step 5: update base page with location of new tail record
-        locType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
-        basePagePhysicalPages = self.page_directory.getPhysicalPages(locType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
+        recordType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
+        basePagePhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
