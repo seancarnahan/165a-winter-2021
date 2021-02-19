@@ -13,12 +13,12 @@ class Database:
         self.bufferPool = BufferPool()
 
     def open(self, path):
-        self.bufferPool.db_path = path
+        self.bufferPool.setDatabaseLocation(path)
         self.bufferPool.createDatabaseDirectory()
         pass
 
     def close(self):
-        self.bufferPool.close()
+        self.bufferPool.save()
         pass
 
     """
@@ -32,11 +32,12 @@ class Database:
             self.bufferPool.createTableDirectory(name)
         except FileExistsError:
             raise TableExistsError(name)
-
+                
+        self.bufferPool.currPageRangeIndexes[name] = -1
+        self.bufferPool.numOfColumns[name] = num_columns
         table = Table(name, num_columns, key, self.bufferPool)
         self.tables.append(table)
-        self.bufferPool.currPageRangeIndexes[name] = 0
-        self.bufferPool.numOfColumns[name] = num_columns
+
 
         return table
 
