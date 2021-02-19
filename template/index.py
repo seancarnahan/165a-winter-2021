@@ -140,7 +140,11 @@ class Index:
 
         index = self.indices[column_number]
 
-        for pageRange in self.table.page_directory.pageRanges:
+        bufferpool = self.table.page_directory.bufferPool
+        latestPageRangeIndex = bufferpool.getCurrPageRangeIndex(self.table.table_name)
+
+        for i in range(latestPageRangeIndex):
+            page_range = bufferpool.loadPageRange(self.table.table_name, i)
             for basePage in pageRange.basePages:
                 for i in range(basePage.numOfRecords):
                     value = basePage.physicalPages[column_number].getRecord(i)
