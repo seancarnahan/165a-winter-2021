@@ -35,6 +35,18 @@ class BufferPool:
         # TODO
         self.dirtyBitTracker = []  # keeps track of number of transactions
 
+    def readMetadata(self):
+        path = os.path.join(self.db_path, "tables_metadata.txt")
+        if os.path.exists(path):
+            with open(path, "r") as fs:
+                row = fs.readline()
+                if len(row) == 0:
+                    return
+                table_name, num_columns, page_range_index = row.split(",")
+                self.currPageRangeIndexes[table_name] = page_range_index
+                self.numOfColumns[table_name] = num_columns
+
+
     """
     1. checks to see if the pageRange is in the table, if its not then it triggers requestPageRange
     2. Once the correct PageRange is loaded then it returns the Page Range from BufferPool
@@ -207,3 +219,23 @@ class BufferPool:
     def createDatabaseDirectory(self):
         if not os.path.exists(self.db_path):
             os.mkdir(self.db_path)
+            fs = open(os.path.join(self.db_path, "tables_metadata.txt"), "w")
+            fs.close()
+
+    def insertTableMetaData(self, table_name, num_columns, page_range_index=0):
+        fs = open(self.db_path + "/tables_metadata.txt", "a")
+        table_entry = "{0}, {1}, {2}\n".format(table_name, num_columns, page_range_index)
+        fs.write(table_entry)
+        fs.close()
+
+    def close(self):
+        path = os.path.join(self.db_path, "tables_metadata.txt")
+        with open(path, "w") as fs:
+            table_names = list(self.currPageRangeIndexes.keys())
+            for table_name in table_names:
+                columns = self.numOfColumns[table_name]
+                currPRIndex = self.currPageRangeIndexes[table_name]
+                table_entry = "{0}, {1}, {2}\n".format(table_name, columns, currPRIndex)
+                fs.write(table_entry)
+
+

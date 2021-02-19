@@ -1,2 +1,3 @@
 *.pyc
 template/__pycache__
+/.vs

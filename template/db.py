@@ -18,6 +18,7 @@ class Database:
         pass
 
     def close(self):
+        self.bufferPool.close()
         pass
 
     """
