@@ -10,7 +10,7 @@ class BufferPool:
     def __init__(self):
         self.size = BUFFER_POOL_NUM_OF_PRs
         self.pageRanges = []  # / list[PageRange(page_range_index, table_name)]
-        self.db_path = ""
+        self.db_path = "./disk"
 
         # metadata to update
         """
@@ -34,6 +34,14 @@ class BufferPool:
 
         # TODO
         self.dirtyBitTracker = []  # keeps track of number of transactions
+
+        if not os.path.exists(self.db_path):
+            os.mkdir(self.db_path)
+
+    def setDatabaseLocation(self, path: str):
+        if path[0:2] == "./":
+            path = path[2:]
+        self.db_path = os.path.join(self.db_path, path)
 
     def readMetadata(self):
         path = os.path.join(self.db_path, "tables_metadata.txt")
@@ -68,13 +76,10 @@ class BufferPool:
         # PageRange is not currently in BufferPool
         if not isPageRangeInBP:
             # request that desired PageRange gets added to BufferPool
-            self.bufferPool.requestPageRange(self.table_name, page_range_index)
+            self.requestPageRange(table_name, page_range_index)
 
         # desired PageRange should be in BufferPool at this point
-        return self.bufferPool.get_page_range_from_buffer_pool(
-            self.table_name,
-            page_range_index
-        )
+        return self.get_page_range_from_buffer_pool( table_name, page_range_index)
 
     """
     #adds PageRange to bufferpool under the assumption that there is already a slot open
@@ -106,7 +111,11 @@ class BufferPool:
         if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
             self.remove_LRU_page()
 
-        page_range = self.read_from_disk(table_name, page_range_index)
+        try:
+            page_range = self.read_from_disk(table_name, page_range_index)
+        except FileNotFoundError as e:
+            self.addNewPageRangeToDisk(table_name)
+            page_range = self.read_from_disk(table_name, page_range_index)
 
         self.add_page_range_to_buffer_pool(page_range)
 
@@ -120,12 +129,13 @@ class BufferPool:
     """
 
     def addNewPageRangeToDisk(self, table_name):
+
         self.currPageRangeIndexes[table_name] += 1
 
         num_of_cols = self.numOfColumns[table_name]
         page_range_index = self.currPageRangeIndexes[table_name]
 
-        page_range = PageRange(num_of_cols, page_range_index, table_name)
+        page_range = PageRange(num_of_cols, table_name, page_range_index)
 
         # add page Range to buffer pool
         self.write_to_disk(page_range)
@@ -142,9 +152,7 @@ class BufferPool:
     """
 
     def get_path(self, db_name, table_name, page_range_index):
-        path = "./disk/" + str(db_name) + "/" + str(table_name) + "/" + "pageRange" + str(
-            page_range_index) + ".p"
-        return path
+        return os.path.join(db_name, table_name, "pageRange{0}.p".format(page_range_index))
 
     """
     # assume the correct PageRange is already in buffer pool
@@ -177,7 +185,7 @@ class BufferPool:
         Read Page Range from disk and bring into memory
         """
 
-        file_path = self.get_path(self.db_name, table_name, page_range_index)
+        file_path = self.get_path(self.db_path, table_name, page_range_index)
         fs = open(file_path, "rb")
         page = pickle.load(fs)
         fs.close()
@@ -191,8 +199,8 @@ class BufferPool:
     """
 
     def write_to_disk(self, page_range: PageRange):
-        table_name = page_range.table_name
-        path = self.get_path(self.db_name, table_name, page_range.index)
+        table_name = page_range.tableName
+        path = self.get_path(self.db_path, table_name, page_range.id)
         fs = open(path, "wb")
         pickle.dump(page_range, fs)
         fs.close()
@@ -222,13 +230,7 @@ class BufferPool:
             fs = open(os.path.join(self.db_path, "tables_metadata.txt"), "w")
             fs.close()
 
-    def insertTableMetaData(self, table_name, num_columns, page_range_index=0):
-        fs = open(self.db_path + "/tables_metadata.txt", "a")
-        table_entry = "{0}, {1}, {2}\n".format(table_name, num_columns, page_range_index)
-        fs.write(table_entry)
-        fs.close()
-
-    def close(self):
+    def save(self):
         path = os.path.join(self.db_path, "tables_metadata.txt")
         with open(path, "w") as fs:
             table_names = list(self.currPageRangeIndexes.keys())
