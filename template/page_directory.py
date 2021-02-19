@@ -20,7 +20,7 @@ class PageDirectory:
         recordLocation = [recordType, locPRIndex]
 
         #points to the correct PageRange in BufferPool
-        currPageRange = self.bufferPool.loadPageRange(table_name, locPRIndex)
+        currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #attempt to add record PageRange
         if currPageRange.insertBaseRecord(record, recordLocation):
@@ -62,7 +62,7 @@ class PageDirectory:
         recordLocation = [recordType, locPRIndex]
 
         #load pageRange into bufferPool if needed
-        currPageRange = self.bufferPool.loadPageRange(selftable_name, locPRIndex)
+        currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #try to add record to PageRange
         return currPageRange.insertTailRecord(record, recordLocation)

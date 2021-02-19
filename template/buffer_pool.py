@@ -46,7 +46,6 @@ class BufferPool:
                 self.currPageRangeIndexes[table_name] = page_range_index
                 self.numOfColumns[table_name] = num_columns
 
-
     """
     1. checks to see if the pageRange is in the table, if its not then it triggers requestPageRange
     2. Once the correct PageRange is loaded then it returns the Page Range from BufferPool
@@ -83,7 +82,7 @@ class BufferPool:
     :param page_range: filled PageRange()
     """
     def add_page_range_to_buffer_pool(self, page_range):
-        selfpageRanges.append(page_range)
+        self.pageRanges.append(page_range)
 
     """
     # this gets called only when the desired page range is not in the bufferPool
@@ -107,7 +106,7 @@ class BufferPool:
         if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
             self.remove_LRU_page()
 
-        page_range = self.read_from_disk(table_index, page_range_index)
+        page_range = self.read_from_disk(table_name, page_range_index)
 
         self.add_page_range_to_buffer_pool(page_range)
 
@@ -123,6 +122,7 @@ class BufferPool:
     def addNewPageRangeToDisk(self, table_name):
         self.currPageRangeIndexes[table_name] += 1
 
+        num_of_cols = self.numOfColumns[table_name]
         page_range_index = self.currPageRangeIndexes[table_name]
 
         page_range = PageRange(num_of_cols, page_range_index, table_name)
