@@ -35,6 +35,7 @@ class Database:
         table = Table(name, num_columns, key, self.bufferPool)
         self.tables.append(table)
         self.bufferPool.currPageRangeIndexes[name] = 0
+        self.bufferPool.numOfColumns[name] = num_columns
 
         return table
 

@@ -28,7 +28,7 @@ class PageDirectory:
             return True
         else:
             #Page Range is full: ask buffer Pool to initialize a new Page Range
-            self.bufferPool.addNewPageRange()
+            self.bufferPool.addNewPageRangeToDisk()
 
             #get the new Page Range Index
             locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)

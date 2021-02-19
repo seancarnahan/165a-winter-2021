@@ -5,8 +5,6 @@ import sys
 import os
 import pickle
 
-
-
 class BufferPool:
 
     def __init__(self):
@@ -24,6 +22,15 @@ class BufferPool:
         *DB initializes a value every time a new table gets created
         """
         self.currPageRangeIndexes = {}
+        #table_name, num_columns, currPageRangeIndex
+
+        """
+        key: table_name
+        value: numOfColumns for that table
+
+        *DB initializes a value every time a new table gets created
+        """
+        self.numOfColumns = {}
 
         # TODO
         self.dirtyBitTracker = []  # keeps track of number of transactions
@@ -59,6 +66,14 @@ class BufferPool:
         )
 
     """
+    #adds PageRange to bufferpool under the assumption that there is already a slot open
+
+    :param page_range: filled PageRange()
+    """
+    def add_page_range_to_buffer_pool(self, page_range):
+        selfpageRanges.append(page_range)
+
+    """
     # this gets called only when the desired page range is not in the bufferPool
     # so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
     # then go to disk read in a Page Range Object based off the params
@@ -77,24 +92,31 @@ class BufferPool:
     """
 
     def requestPageRange(self, table_name, page_range_index):
-        if len(self.pageRanges) == BUFFER_POOL_NUM_OF_PRs:
-            remove_LRU_page()
-        page_range = read_from_disk(table_index, page_range_index)
+        if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
+            self.remove_LRU_page()
+
+        page_range = self.read_from_disk(table_index, page_range_index)
+
+        self.add_page_range_to_buffer_pool(page_range)
+
 
     """
     # This is called when PageRange they are trying to add a Base Record to is full
     # This will only be called during inserts
 
     #create a new PageRange on disk
-    #load new PageRange into bufferpool -> might want to call requestPageRange
-
     #TODO: Long
     """
 
-    # TODO
-    def addNewPageRange(self, table_name):
+    def addNewPageRangeToDisk(self, table_name):
         self.currPageRangeIndexes[table_name] += 1
-        pass
+
+        page_range_index = self.currPageRangeIndexes[table_name]
+
+        page_range = PageRange(num_of_cols, page_range_index, table_name)
+
+        # add page Range to buffer pool
+        self.write_to_disk(page_range)
 
     """
     :param db_name: name of the DB
@@ -108,7 +130,7 @@ class BufferPool:
     """
 
     def get_path(self, db_name, table_name, page_range_index):
-        path = "../disk/" + str(db_name) + "/" + str(table_name) + "/" + str(
+        path = "./disk/" + str(db_name) + "/" + str(table_name) + "/" + "pageRange" + str(
             page_range_index) + ".p"
         return path
 
@@ -124,10 +146,9 @@ class BufferPool:
     """
 
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
-        for table in self.pageRanges:
-            if table.tableName == table_name:
-                return table
-
+        for page_range in self.pageRanges:
+            if page_range.tableName == table_name and page_range.id == page_range_index:
+                return page_range
 
     """
     :param table_name: name of the table
@@ -138,13 +159,6 @@ class BufferPool:
     def getCurrPageRangeIndex(self, table_name):
         return self.currPageRangeIndexes[table_name]
 
-    """
-    input: filename (relative path?)
-    output: true or false based on succesful deletion
-    """
-
-    def deleteFile(self, fileName: str):
-        pass
 
     def read_from_disk(self, table_name: str, page_range_index: int):  # Gabriel
         """
