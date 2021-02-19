@@ -3,7 +3,7 @@ from template.config import *
 
 class PageRange:
 
-    def __init__(self, num_columns, page_range_index, table_name):
+    def __init__(self, num_columns, table_name, page_range_index):
         self.num_columns = num_columns
         self.maxNumOfBasePages = self.getPageRangeCapacity()
         self.currBasePageIndex = 0

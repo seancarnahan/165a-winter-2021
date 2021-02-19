@@ -48,7 +48,7 @@ class Query:
         try:
             self.table.createNewRecord(columns[0], columns)
             return True
-        except:
+        except Exception as e:
             return False
 
     """
@@ -72,7 +72,7 @@ class Query:
                         record.columns[counter - 1] = None
                     recordList.append(record)
             return recordList
-        except:
+        except Exception as e:
             return False
 
 

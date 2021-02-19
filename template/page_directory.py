@@ -16,6 +16,10 @@ class PageDirectory:
         #get available pageRange for insert
         locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)
 
+        if locPRIndex == -1:
+            locPRIndex = 0
+
+
         #initialize record location
         recordLocation = [recordType, locPRIndex]
 
@@ -28,7 +32,7 @@ class PageDirectory:
             return True
         else:
             #Page Range is full: ask buffer Pool to initialize a new Page Range
-            self.bufferPool.addNewPageRangeToDisk()
+            self.bufferPool.addNewPageRangeToDisk(self.table_name)
 
             #get the new Page Range Index
             locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)

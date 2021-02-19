@@ -20,7 +20,7 @@ class Table:
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
         self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
-        # self.index.create_index(key+RECORD_COLUMN_OFFSET)
+        self.index.create_index(key+RECORD_COLUMN_OFFSET)
         self.latestRID = None
         self.currPageRangeIndex = 0
 
@@ -31,7 +31,7 @@ class Table:
         recordType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
 
         #loadd page range into buffer pool
-        pageRange = self.page_directory.loadPageRange(locPRIndex)
+        pageRange = self.page_directory.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         physicalPages = None
         if recordType == 1:
