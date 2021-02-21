@@ -22,7 +22,7 @@ class PhysicalPages:
 
         record.RID = RID
         # make check so tail record does not set self to base_RID
-        if record.indirection == 0:
+        if recordLocation[0] == 1:
             record.base_RID = record.RID
 
         self.physicalPages[INDIRECTION_COLUMN].write(record.indirection)
