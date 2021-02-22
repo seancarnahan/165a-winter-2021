@@ -6,6 +6,10 @@ class TableExistsError(Exception):
     def __init__(self, table):
         super().__init__("Table exists: {0}".format(table))
 
+class TableNotFoundError(Exception):
+    def __init__(self, table_name):
+        super().__init__("Table does not exist: {0}".format(table_name))
+
 class Database:
 
     def __init__(self):
@@ -15,11 +19,21 @@ class Database:
     def open(self, path):
         self.bufferPool.setDatabaseLocation(path)
         self.bufferPool.createDatabaseDirectory()
-        pass
+        self.bufferPool.load_data()
+        self.__load_tables()
+
+    def __load_tables(self):
+        table_metadata_path = self.bufferPool.db_path + "/tables_metadata.txt"
+
+        with open(table_metadata_path) as f:
+            f.readline() # read the headers, we won't need them.
+            for table_entry in f:
+                table_name, num_columns, key_column, _ = table_entry.split(",")
+                self.tables.append(Table(table_name, int(num_columns), int(key_column), self.bufferPool))
+
 
     def close(self):
-        self.bufferPool.save()
-        pass
+        self.bufferPool.save(self.tables)
 
     """
     # Creates a new table
@@ -47,7 +61,7 @@ class Database:
 
     def drop_table(self, name):
         for table in self.tables:
-            if table.name == name:
+            if table.table_name == name:
                 self.tables.remove(table)
                 self.bufferPool.deleteTableDirectory(name)
 
@@ -57,10 +71,9 @@ class Database:
 
     def get_table(self, name):
         for table in self.tables:
-            if table.name == name:
+            if table.table_name == name:
                 return table
-
-        raise Exception("table: " + name + " not found in database")
+        raise TableNotFoundError(name)
 
 
     """

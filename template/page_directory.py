@@ -74,7 +74,7 @@ class PageDirectory:
 
     def getPhysicalPages(self, recordType, locPRIndex, loc_PIndex, locPhyPageIndex):
         #load pageRange
-        pageRange = self.loadPageRange(self.table_name, locPRIndex)
+        pageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         if recordType == 1:
             #base Page
