@@ -6,13 +6,14 @@ from template.config import *
 
 from time import time
 
-class Table:
 
+class Table:
     """
     :param name: string         #Table name
     :param num_columns: int     #Number of Columns: all columns are integer
     :param key: int             #Index of table key in columns
     """
+
     def __init__(self, table_name, num_columns, key, bufferPool):
         self.table_name = table_name
         self.key = key
@@ -20,14 +21,14 @@ class Table:
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
         self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
-        self.index.create_index(key+RECORD_COLUMN_OFFSET)
+        self.index.create_index(key + RECORD_COLUMN_OFFSET)
 
-    #Input: RID
-    #Output: Record Object with RID added
+    # Input: RID
+    # Output: Record Object with RID added
     def getRecord(self, RID):
         recordType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
 
-        #loadd page range into buffer pool
+        # load page range into buffer pool
         pageRange = self.page_directory.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         physicalPages = None
@@ -56,6 +57,7 @@ class Table:
     return the latest updated tail record of the given base RID
     :param baseRID: integer     #rid of the base page you want the latest updates for
     """
+
     def getLatestupdatedRecord(self, baseRID):
         record = self.getRecord(baseRID)
 
@@ -64,8 +66,8 @@ class Table:
 
         return record
 
-    #INSERT -> only created new BASE Records
-    #input: values: values of columns to be inserted; excluding the metadata
+    # INSERT -> only created new BASE Records
+    # input: values: values of columns to be inserted; excluding the metadata
     def createNewRecord(self, key, columns):
 
         # RID = self.getNewRID() -> get RID when you put the record in the DB
@@ -73,28 +75,28 @@ class Table:
         timeStamp = self.getNewTimeStamp()
         encoding = 0
 
-        #create Record Object
+        # create Record Object
         record = Record(key, indirection, timeStamp, encoding, columns)
 
-        #insert a new record -> all the checks for capacity are done implicitly
+        # insert a new record -> all the checks for capacity are done implicitly
         self.page_directory.insertBaseRecord(record)
 
         self.index.insert(record.RID, columns)
 
-    #input: values: values of columns to be inserted; excluding the metadata
-    #input: RID: the RID of the base Record you would like to provide an update for
+    # input: values: values of columns to be inserted; excluding the metadata
+    # input: RID: the RID of the base Record you would like to provide an update for
     def updateRecord(self, key, RID, values, deleteFlag=False):
-        #Step 1: get the updated Values
+        # Step 1: get the updated Values
         baseRecord = self.getRecord(RID)
         prevUpdateRecord = None
         updatedValues = None
 
         if baseRecord.indirection == 0:
-            #base Record has not been updated
+            # base Record has not been updated
 
             updatedValues = self.getUpdatedRow(baseRecord.columns, values)
         else:
-            #base Record has been updated
+            # base Record has been updated
             prevUpdateRecord = self.getRecord(baseRecord.indirection)
 
             updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
@@ -104,12 +106,13 @@ class Table:
         else:
             self.index.updateIndexes(baseRecord.RID, baseRecord.columns, updatedValues)
 
-        #step 2: create New tail Record
+        # step 2: create New tail Record
         indirection = 0
         timeStamp = self.getNewTimeStamp()
         encoding = 0
+        base_rid = baseRecord.RID
 
-        #check for delete flag
+        # check for delete flag
         if deleteFlag == True:
             encoding = 2
             self.index.remove(RID, updatedValues)
@@ -117,25 +120,29 @@ class Table:
                 updatedValues[i] = 0
 
         record = Record(key, indirection, timeStamp, encoding, updatedValues)
+        record.base_RID = base_rid
 
-        #step 3: add the record and get the RID
+        # step 3: add the record and get the RID
         tailRecordRID = self.page_directory.insertTailRecord(RID, record)
 
-        #step 4: if there is a prevTail, then set the prev tail record to point to the new tail record
+        # step 4: if there is a prevTail, then set the prev tail record to point to the new tail record
         if baseRecord.indirection != 0:
-            recordType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(prevUpdateRecord.RID)
-            prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locTPIndex, locPhyPageIndex).physicalPages
+            recordType, locPRIndex, locTPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(
+                prevUpdateRecord.RID)
+            prevTailRecordPhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locTPIndex,
+                                                                               locPhyPageIndex).physicalPages
             prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
             prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-        #Step 5: update base page with location of new tail record
+        # Step 5: update base page with location of new tail record
         recordType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
-        basePagePhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locBPIndex, locPhyPageIndex).physicalPages
-        basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex,tailRecordRID)
+        basePagePhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locBPIndex,
+                                                                     locPhyPageIndex).physicalPages
+        basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-    #input currValues and update should both be lists of integers of equal lengths
-    #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
+    # input currValues and update should both be lists of integers of equal lengths
+    # output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
     def getUpdatedRow(self, currValues, update):
         updatedValues = []
 

@@ -21,11 +21,15 @@ class PhysicalPages:
         RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
 
         record.RID = RID
+        # make check so tail record does not set self to base_RID
+        if recordLocation[0] == 1:
+            record.base_RID = record.RID
 
         self.physicalPages[INDIRECTION_COLUMN].write(record.indirection)
         self.physicalPages[RID_COLUMN].write(RID)
         self.physicalPages[TIMESTAMP_COLUMN].write(record.timestamp)
         self.physicalPages[SCHEMA_ENCODING_COLUMN].write(record.encoding)
+        self.physicalPages[BASE_RID_COLUMN].write(record.base_RID)
 
         for col in range(RECORD_COLUMN_OFFSET, RECORD_COLUMN_OFFSET + len(record.columns)):
             columnData = record.columns[col - RECORD_COLUMN_OFFSET]

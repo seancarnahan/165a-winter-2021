@@ -21,6 +21,8 @@ class Record:
         #must call getNewRID for this to be added
         self.RID = None
 
+        self.base_RID = None
+
     #input: record location
     #output: record location in integer form; #example: 123456789
     def getNewRID(self, recordType, locPRIndex, locBPIndex, locPhyPageIndex):

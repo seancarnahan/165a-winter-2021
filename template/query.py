@@ -17,7 +17,7 @@ class Query:
     """
     # internal Method
     # Read a record with specified RID
-    # Returns True upon succesful deletion
+    # Returns True upon successful deletion
     # Return False if record doesn't exist or is locked due to 2PL
     When a record is deleted, the base record will be
     invalidated by setting the RID of itself and all its tail records to a special value
