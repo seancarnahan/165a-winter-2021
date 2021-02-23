@@ -46,6 +46,15 @@ class MergeThread(threading.Thread):
             print('\nInitiating a merge...')
             self.db.merge_placeholder()  # placeholder for db merge method
 
+        """
+        trigger merge based on either a) time or b) unmergedTailRecords threshold
+        sort buffer_pool.merge_queue by number of unmerged tail records
+        grab head from queue
+        head has table_name and PR to merge on
+        merge all tail pages in that PR
+        reset number of unmerged tail records belonging to that table_name.PR to 0
+        """
+
     def stop_thread(self):
         """
         sets the exit_request event flag to True so thread will terminate asap
