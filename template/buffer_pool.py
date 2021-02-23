@@ -12,33 +12,32 @@ class BufferPool:
         self.pageRanges = []  # / list[PageRange(page_range_index, table_name)]
         self.db_path = "./disk"
 
-        # metadata to update
         """
-        this is used for inserts to know the next available pageRange in a table
-
-        key: table_name
-        value: the available page_range_index for the next insert for the corresponding table
-
-        *DB initializes a value every time a new table gets created
+        # BELOW: MetaData that persists even after DB is closed
+        # table_name, num_columns, currPageRangeIndex, ...
         """
+        # this is used for inserts to know the next available pageRange in a table
+        # key: table_name
+        # value: the available page_range_index for the next insert for the corresponding table
+        # DB initializes a value every time a new table gets created
         self.currPageRangeIndexes = {}
-        #table_name, num_columns, currPageRangeIndex
 
-        """
-        key: table_name
-        value: numOfColumns for that table
-
-        *DB initializes a value every time a new table gets created
-        """
+        # key: table_name
+        # value: numOfColumns for that table
+        # DB initializes a value every time a new table gets created
         self.numOfColumns = {}
 
+        """ 
+        BELOW: State of current Page Ranges in BufferPool
+        """
         # tracks transactions
         self.pins = []
 
-        #increment counter everytime load is called on this
-        self.requestsPerPR = [] #counter for requests
+        # count requests per page range
+        self.requestsPerPR = []
 
-        self.dirtyBitTracker = []  # keeps track of number of transactions
+        # true or false if have been updated
+        self.dirtyBitTracker = []
 
         if not os.path.exists(self.db_path):
             os.mkdir(self.db_path)
@@ -83,15 +82,19 @@ class BufferPool:
             # request that desired PageRange gets added to BufferPool
             self.requestPageRange(table_name, page_range_index)
 
-        #increment pins
-        page_range_index_in_BP = get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+
+        # increment pins
         self.pins[page_range_index_in_BP] += 1
+
+        # increment requestsPerPR
+        self.requestsPerPR[page_range_index_in_BP] += 1
 
         # desired PageRange should be in BufferPool at this point
         return self.get_page_range_from_buffer_pool( table_name, page_range_index)
 
 
-    def unloadPageRange(self, table_name, page_range_index):
+    def releasePin(self, table_name, page_range_index):
         #decrement pin
         page_range_index_in_BP = get_page_range_index_in_buffer_pool(table_name, page_range_index)
         self.pins[page_range_index_in_BP] -= 1
@@ -104,16 +107,26 @@ class BufferPool:
                 return i
 
     """
-    #adds PageRange to bufferpool under the assumption that there is already a slot open
+    # adds PageRange to bufferpool under the assumption that there is already a slot open
 
     :param page_range: filled PageRange()
     """
     def add_page_range_to_buffer_pool(self, page_range):
+        # init a pin count
+        self.pins.append(0)
+
+        # init a request per page range count
+        self.requestsPerPR.append(0)
+
+        # add a dirty bit to dirty bit tracker
+        self.dirtyBitTracker.append(False)
+
+        # add page range to bufferpool
         self.pageRanges.append(page_range)
 
     """
     # this gets called only when the desired page range is not in the bufferPool
-    # so we remove LRU pageRange -> only remove LRU when there are 3 in memory(use config)
+    # so we remove LFU pageRange -> only remove LFU when there are 3 in memory(use config)
     # then go to disk read in a Page Range Object based off the params
     # then add this new pageRange to the bufferpool
 
@@ -128,10 +141,10 @@ class BufferPool:
 
     # TODO: Long
     """
-
+    #TODO: make this async
     def requestPageRange(self, table_name, page_range_index):
         if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
-            self.remove_LRU_page()
+            self.remove_LFU_page() #TODO: await this method
 
         try:
             page_range = self.read_from_disk(table_name, page_range_index)
@@ -149,7 +162,6 @@ class BufferPool:
     #create a new PageRange on disk
     #TODO: Long
     """
-
     def addNewPageRangeToDisk(self, table_name):
 
         self.currPageRangeIndexes[table_name] += 1
@@ -172,7 +184,6 @@ class BufferPool:
 
     TODO: long
     """
-
     def get_path(self, db_name, table_name, page_range_index):
         return os.path.join(db_name, table_name, "pageRange{0}.p".format(page_range_index))
 
@@ -186,7 +197,6 @@ class BufferPool:
 
     TODO: long
     """
-
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
         for page_range in self.pageRanges:
             if page_range.tableName == table_name and page_range.id == page_range_index:
@@ -197,16 +207,13 @@ class BufferPool:
 
     :return the latest PageRange created for the table
     """
-
     def getCurrPageRangeIndex(self, table_name):
         return self.currPageRangeIndexes[table_name]
 
-
+    """
+    Read Page Range from disk and bring into memory
+    """
     def read_from_disk(self, table_name: str, page_range_index: int):  # Gabriel
-        """
-        Read Page Range from disk and bring into memory
-        """
-
         file_path = self.get_path(self.db_path, table_name, page_range_index)
         fs = open(file_path, "rb")
         page = pickle.load(fs)
@@ -219,7 +226,6 @@ class BufferPool:
         updates the txt file
         returns true if its able to update; else: false
     """
-
     def write_to_disk(self, page_range: PageRange):
         table_name = page_range.tableName
         path = self.get_path(self.db_path, table_name, page_range.id)
@@ -228,40 +234,53 @@ class BufferPool:
         fs.close()
 
     """
-    - determine which page in the buffer pool to evict
-    - check if the evictable page is dirty, if so update the page in disk
-    - pinning and unpinning counters -> might have to add that to the Page
-
-    aly
+    must return something, make sure to await on this function
     """
-
-    #must return something, make sure to await on this function
-    def remove_LRU_page(self):
+    def remove_LFU_page(self):
         #keep looping until a page is removed
         while True:
             # find least recently used pageRanges
-            ordered_LRUs = self.order_LRUs()
+            ordered_LFUs = self.order_LFUs()
 
-            for i in range(len(ordered_LRUs)):
-                if check_if_pr_not_in_use():
+            for i in range(len(ordered_LFUs)):
+                if self.check_if_pr_not_in_use(ordered_LFUs[i]):
                     #remove page range
-                    #reset pin
-                    pass
-            # if all are in use start cycle over again
+                    self.removePageRangeFromBufferPool(ordered_LFUs[i])
+        return True
 
     """
     :param index: the index of the page range in buffer pool
     
-    check for index out of bounds error
     check dirty bit
     """
     def removePageRangeFromBufferPool(self, index):
-        pass
+
+        #check for a dirty bit, if true, write to disk
+        if dirtyBitTracker[index] == True:
+            self.write_to_disk(self.pageRanges[index])
+
+        try:
+            # remove page range
+            del self.pageRanges[index]
+
+            # remove dirtyBitTracker
+            del self.dirtyBitTracker[index]
+
+            # remove requestsPerPR
+            del self.requestsPerPR[index]
+
+            # remove pin
+            del self.pins[index]
+        except IndexError:
+            print("ERROR in [removePageRangeFromBufferPool]: invalid index")
 
     """
-    return list [least recently used -> most used]
+    list [least recently used -> most used]
+    
+    return list[index of page ranges in buffer pool, but are sorted]
     """
-    def order_LRUs(self):
+    def order_LFUs(self):
+        # requestsPerPRCopy = requestsPerPR.copy()
 
         mappedList = list(map(lambda x: (x, self.requestsPerPR.index(x)), self.requestsPerPR))
 
@@ -272,10 +291,17 @@ class BufferPool:
         return page_ranges_sorted_by_LFU
 
     """
+    :param index: the index of the page range in buffer pool
+    
     return true if the page range is NOT in use, false otherwise
     """
-    def check_if_pr_not_in_use(self):
-        pass
+    def check_if_pr_not_in_use(self, index):
+        pin = self.pins[index]
+
+        if pin == 0:
+            return True
+        else:
+            return False
 
     def createTableDirectory(self, table_name):
         full_path = os.path.join(self.db_path, table_name)

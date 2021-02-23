@@ -138,7 +138,7 @@ class Table:
         # Step 5: update base page with location of new tail record
 =======
             # decrement pin
-            self.bufferPool.unloadPageRange(table_name, locPRIndex)
+            self.bufferPool.releasePin(table_name, locPRIndex)
 
         #Step 5: update base page with location of new tail record
 >>>>>>> Stashed changes
@@ -153,7 +153,7 @@ class Table:
     # output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
 =======
         # decrement pin
-        self.bufferPool.unloadPageRange(table_name, locPRIndex)
+        self.bufferPool.releasePin(table_name, locPRIndex)
 
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
