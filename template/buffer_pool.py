@@ -32,7 +32,12 @@ class BufferPool:
         """
         self.numOfColumns = {}
 
-        # TODO
+        # tracks transactions
+        self.pins = []
+
+        #increment counter everytime load is called on this
+        self.requestsPerPR = [] #counter for requests
+
         self.dirtyBitTracker = []  # keeps track of number of transactions
 
         if not os.path.exists(self.db_path):
@@ -78,8 +83,25 @@ class BufferPool:
             # request that desired PageRange gets added to BufferPool
             self.requestPageRange(table_name, page_range_index)
 
+        #increment pins
+        page_range_index_in_BP = get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        self.pins[page_range_index_in_BP] += 1
+
         # desired PageRange should be in BufferPool at this point
         return self.get_page_range_from_buffer_pool( table_name, page_range_index)
+
+
+    def unloadPageRange(self, table_name, page_range_index):
+        #decrement pin
+        page_range_index_in_BP = get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        self.pins[page_range_index_in_BP] -= 1
+
+    def get_page_range_index_in_buffer_pool(self, table_name, page_range_index):
+        for i in range(len(self.pageRanges)):
+            pageRange = self.pageRanges[i]
+
+            if pageRange.tableName == table_name and pageRange.id == page_range_index:
+                return i
 
     """
     #adds PageRange to bufferpool under the assumption that there is already a slot open
@@ -213,7 +235,43 @@ class BufferPool:
     aly
     """
 
+    #must return something, make sure to await on this function
     def remove_LRU_page(self):
+        #keep looping until a page is removed
+        while True:
+            # find least recently used pageRanges
+            ordered_LRUs = self.order_LRUs()
+
+            for i in range(len(ordered_LRUs)):
+                if check_if_pr_not_in_use():
+                    #remove page range
+                    #reset pin
+                    pass
+            # if all are in use start cycle over again
+
+    """
+    :param index: the index of the page range in buffer pool
+    
+    check for index out of bounds error
+    check dirty bit
+    """
+    def removePageRangeFromBufferPool(self, index):
+        pass
+
+    """
+    return list [least recently used -> most used]
+    """
+    def order_LRUs(self):
+        requestsPerPRCopy = requestsPerPR.copy()
+
+        requestsPerPRCopy.sort()
+
+        return requestsPerPRCopy
+
+    """
+    return true if the page range is NOT in use, false otherwise
+    """
+    def check_if_pr_not_in_use(self):
         pass
 
     def createTableDirectory(self, table_name):

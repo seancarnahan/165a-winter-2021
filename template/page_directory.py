@@ -28,9 +28,15 @@ class PageDirectory:
 
         #attempt to add record PageRange
         if currPageRange.insertBaseRecord(record, recordLocation):
-            #successfully added a record into pageRange that is loaded in buffer pool
+            #decrement pin counter
+            self.bufferPool.unloadPageRange(table_name, locPRIndex)
+
+            # successfully added a record into pageRange that is loaded in buffer pool
             return True
         else:
+            #if it fails unload the pin
+            self.bufferPool.unloadPageRange(table_name, locPRIndex)
+
             #Page Range is full: ask buffer Pool to initialize a new Page Range
             self.bufferPool.addNewPageRangeToDisk(self.table_name)
 
@@ -46,10 +52,12 @@ class PageDirectory:
             #Recursive -> attempt to add record to PageRange
             currPageRange.insertBaseRecord(record, recordLocation)
 
+            #unload the pin
+            self.bufferPool.unloadPageRange(table_name, locPRIndex)
+
             return True
 
 
-    #TODO: for merge -> we can get capacity of tail records, once it reaches its max then we can merge
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, baseRID, record):
 
@@ -69,12 +77,18 @@ class PageDirectory:
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #try to add record to PageRange
-        return currPageRange.insertTailRecord(record, recordLocation)
+        ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation)
+
+        #decrement pin
+        self.bufferPool.unloadPageRange(table_name, locPRIndex)
+
+        return ridOfTailRecord
 
 
     def getPhysicalPages(self, recordType, locPRIndex, loc_PIndex, locPhyPageIndex):
         #load pageRange
         pageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
+
 
         if recordType == 1:
             #base Page
