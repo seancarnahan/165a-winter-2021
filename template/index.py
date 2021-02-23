@@ -60,7 +60,7 @@ class Index:
         """
         for i in range(len(self.indices)):
             if self.indices[i] is not None:
-                self.removeFromIndex(i, rid, values[i])
+                self.removeRIDFromIndex(i, rid, values[i])
 
     def locate(self, column, value):
         """
@@ -105,10 +105,7 @@ class Index:
 
         index = self.indices[column+RECORD_COLUMN_OFFSET]
 
-        if seeds[0] > begin:
-            currKey = seeds[0]  # set currKey to minKey
-        else:
-            currKey = begin
+        currKey = seeds[0]  # set currKey to minKey
 
         if begin > seeds[1]: # if begin > medianKey, skip everything before medianKey
             currKey = seeds[1]
@@ -118,7 +115,8 @@ class Index:
 
         while currKey <= end:
             try:
-                matching_rids.extend(index[currKey][0])
+                if currKey in range(begin, end+1):
+                    matching_rids.extend(index[currKey][0])
                 currKey = index[currKey][1]
                 if currKey is None:
                     break
@@ -143,12 +141,12 @@ class Index:
         bufferpool = self.table.page_directory.bufferPool
         latestPageRangeIndex = bufferpool.getCurrPageRangeIndex(self.table.table_name)
 
-        for i in range(latestPageRangeIndex):
-            page_range = bufferpool.loadPageRange(self.table.table_name, i)
+        for i in range(latestPageRangeIndex+1):
+            pageRange = bufferpool.loadPageRange(self.table.table_name, i)
             for basePage in pageRange.basePages:
                 for i in range(basePage.numOfRecords):
-                    value = basePage.physicalPages[column_number].getRecord(i)
                     rid = basePage.physicalPages[RID_COLUMN].getRecord(i)
+                    value = self.table.getRecord(rid).columns[column_number-RECORD_COLUMN_OFFSET]
                     index[value].append(rid)
 
         sortedKeys = list(index)
@@ -190,25 +188,8 @@ class Index:
         except IndexError:
             raise InvalidColumnError(column_number)
 
-        self.removeFromIndex(column_number, rid, oldValue)
+        self.removeRIDFromIndex(column_number, rid, oldValue)
         self.insertIntoIndex(column_number, rid, newValue)
-
-        return True
-
-    def removeFromIndex(self, column_number, rid, value):
-        try:
-            if self.indices[column_number] is None:
-                raise InvalidIndexError(column_number)
-        except IndexError:
-            raise InvalidColumnError(column_number)
-
-        index = self.indices[column_number]
-
-        if value in index.keys():
-            index[value][0].remove(rid)
-
-            if len(index[value][0]) == 0:
-                del index[value]
 
         return True
 
@@ -232,8 +213,7 @@ class Index:
             self.createNewKeyEntry(index, column_number, value)
 
         index[value][0].append(rid)
-
-        self.updateMedianSeed(column_number, list(index.keys()))
+        self.updateSeeds(column_number)
 
         return True
 
@@ -258,12 +238,12 @@ class Index:
 
         if key < seeds[0]:
             index[key] = [[], seeds[0]]
-            self.updateMinSeed(column, key)
+            self.updateSeeds(column)
             return
         elif key > seeds[2]:
             index[key] = [[], None]
             index[seeds[2]][1] = key
-            self.updateMaxSeed(column, key)
+            self.updateSeeds(column)
             return
 
         if key < seeds[1]:
@@ -281,11 +261,36 @@ class Index:
         index[prevKey][1] = key  # make the prevKey point to the new key
         index[key] = [[], nextKey]  # make the new key point to the smallest key larger than newKey
 
-    def updateMaxSeed(self, column, value):
-        self.seeds[column][2] = value
+    def removeRIDFromIndex(self, column_number, rid, value):
+        try:
+            if self.indices[column_number] is None:
+                raise InvalidIndexError(column_number)
+        except IndexError:
+            raise InvalidColumnError(column_number)
 
-    def updateMinSeed(self, column, value):
-        self.seeds[column][0] = value
+        index = self.indices[column_number]
 
-    def updateMedianSeed(self, column, values):
-        self.seeds[column][1] = values[int(len(values) / 2)]
+        if value in index.keys():
+            index[value][0].remove(rid)
+
+            if len(index[value][0]) == 0:
+                sorted_keys = list(index.keys())
+                sorted_keys.sort()
+
+                valueIndex = sorted_keys.index(value)
+
+                if valueIndex != 0: # if we're not at the front of sorted_keys, then we must fix the linked list
+                    prevValue = sorted_keys[valueIndex-1]
+                    index[prevValue][1] = index[value][1]
+
+                del index[value]
+                self.updateSeeds(column_number)
+
+    def updateSeeds(self, column):
+        indexKeys = list(self.indices[column].keys())
+        self.seeds[column][0] = min(indexKeys)
+        self.seeds[column][2] = max(indexKeys)
+        self.seeds[column][1] = indexKeys[len(indexKeys)//2]
+
+
+

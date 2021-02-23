@@ -230,14 +230,30 @@ class BufferPool:
             fs = open(os.path.join(self.db_path, "tables_metadata.txt"), "w")
             fs.close()
 
-    def save(self):
+    def save(self, tables):
+        headers = "table_name, num_columns, key_column, currentPRIndex\n"
         path = os.path.join(self.db_path, "tables_metadata.txt")
         with open(path, "w") as fs:
-            table_names = list(self.currPageRangeIndexes.keys())
-            for table_name in table_names:
-                columns = self.numOfColumns[table_name]
+            fs.write(headers)
+            for table in tables:
+                table_name = table.table_name
+                key_column = table.key
                 currPRIndex = self.currPageRangeIndexes[table_name]
-                table_entry = "{0}, {1}, {2}\n".format(table_name, columns, currPRIndex)
+                table_entry = "{0},{1},{2},{3}\n".format(table_name, table.num_columns, key_column, currPRIndex)
                 fs.write(table_entry)
+
+        for page_range in self.pageRanges:
+            self.write_to_disk(page_range)
+
+    def load_data(self):
+        path = os.path.join(self.db_path, "tables_metadata.txt")
+
+        with open(path) as fs:
+            fs.readline()
+            for table_entry in fs:
+                table_name, num_columns, _, currentPRIndex = table_entry.split(",")
+
+                self.numOfColumns[table_name] = int(num_columns)
+                self.currPageRangeIndexes[table_name] = int(currentPRIndex)
 
 

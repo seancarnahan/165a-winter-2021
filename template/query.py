@@ -70,7 +70,7 @@ class Query:
                     counter += 1
                     if bit == 0:
                         record.columns[counter - 1] = None
-                    recordList.append(record)
+                recordList.append(record)
             return recordList
         except Exception as e:
             return False

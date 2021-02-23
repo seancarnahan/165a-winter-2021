@@ -22,8 +22,6 @@ class Table:
         self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
-        self.latestRID = None
-        self.currPageRangeIndex = 0
 
     # Input: RID
     # Output: Record Object with RID added
@@ -117,6 +115,7 @@ class Table:
         # check for delete flag
         if deleteFlag == True:
             encoding = 2
+            self.index.remove(RID, updatedValues)
             for i in range(len(updatedValues)):
                 updatedValues[i] = 0
 
