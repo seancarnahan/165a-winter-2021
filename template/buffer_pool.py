@@ -262,11 +262,14 @@ class BufferPool:
     return list [least recently used -> most used]
     """
     def order_LRUs(self):
-        requestsPerPRCopy = requestsPerPR.copy()
 
-        requestsPerPRCopy.sort()
+        mappedList = list(map(lambda x: (x, self.requestsPerPR.index(x)), self.requestsPerPR))
 
-        return requestsPerPRCopy
+        mappedList.sort(key=lambda tup: tup[0])
+
+        page_ranges_sorted_by_LFU = list(map(lambda tup: tup[0], mappedList))
+
+        return page_ranges_sorted_by_LFU
 
     """
     return true if the page range is NOT in use, false otherwise

@@ -1,2 +1,0 @@
-table_name, num_columns, key_column, currentPRIndex
-Grades,5,0,0
