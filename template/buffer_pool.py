@@ -56,6 +56,10 @@ class BufferPool:
         sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.tailRecordsSinceLastMerge)
         sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
 
+        # Don't need to merge
+        if len(sorted_tailRecordsSinceLastMerge) == 0:
+            return True
+
         # get the greatest num of tailRecordsSinceLastMerge
         greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
 

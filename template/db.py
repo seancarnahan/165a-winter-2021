@@ -42,8 +42,8 @@ class Database:
                 self.tables.append(Table(table_name, int(num_columns), int(key_column), self.bufferPool))
 
     def close(self):
-        self.bufferPool.save(self.tables)
         self.merge_thread.stop_thread()  # prompts the thread to finish and terminate
+        self.bufferPool.save(self.tables)
 
     """
     # Creates a new table
@@ -131,7 +131,7 @@ class Database:
             # deepcopy() is used to copy an object and child objects within it
             # copy() shallow copies an object but its children are references to the original
             consolidated_BP.numOfRecords = copy.deepcopy(orig_bp.numOfRecords)
-            for j in enumerate(consolidated_BP.physicalPages):
+            for j in range(len(consolidated_BP.physicalPages)):
                 if j != INDIRECTION_COLUMN:
                     consolidated_BP.physicalPages[j] = copy.deepcopy(orig_bp.physicalPages[j])
 
@@ -152,11 +152,13 @@ class Database:
         # TODO: only reverse iterate until reaching the latest merged tail record
         #  not all the tail records
         # reverse iterate over all tail pages in Page Range
-        for page_num, tail_page in reversed(list(enumerate(range_to_merge.tailPages))):
+        for item in reversed(list(enumerate(range_to_merge.tailPages))):
+            page_num = item[0]
+            tail_page = item[1]
             tail_page_records = tail_page.getAllRecords()
 
             # reverse iterate over all records within this tail page
-            for i, record in reversed(tail_page_records):
+            for i, record in enumerate(reversed(tail_page_records)):
                 if not record[BASE_RID_COLUMN] in seenUpdatesSet:
                     # add the BaseRID as the key to the "hashmap"
                     seenUpdatesSet.add(record[BASE_RID_COLUMN])
