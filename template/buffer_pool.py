@@ -339,9 +339,11 @@ class BufferPool:
             os.mkdir(self.db_path)
             fs = open(os.path.join(self.db_path, "tables_metadata.txt"), "w")
             fs.close()
+            fs = open(os.path.join(self.db_path, "page_range_metadata.txt"), "w")
+            fs.close()
 
     def save(self, tables):
-        headers = "table_name, num_columns, key_column, currentPRIndex\n"
+        headers = "table_name,num_columns,key_column,currentPRIndex\n"
         path = os.path.join(self.db_path, "tables_metadata.txt")
         with open(path, "w") as fs:
             fs.write(headers)
@@ -351,6 +353,12 @@ class BufferPool:
                 currPRIndex = self.currPageRangeIndexes[table_name]
                 table_entry = "{0},{1},{2},{3}\n".format(table_name, table.num_columns, key_column, currPRIndex)
                 fs.write(table_entry)
+
+        path = os.path.join(self.db_path, "page_range_metadata.txt")
+        with open(path, "w") as fs:
+            for entry in self.tailRecordsSinceLastMerge:
+                line = "{0},{1},{2}\n".format(*entry)
+                fs.write(line)
 
         for page_range in self.pageRanges:
             self.write_to_disk(page_range)
@@ -362,8 +370,11 @@ class BufferPool:
             fs.readline()
             for table_entry in fs:
                 table_name, num_columns, _, currentPRIndex = table_entry.split(",")
-
                 self.numOfColumns[table_name] = int(num_columns)
                 self.currPageRangeIndexes[table_name] = int(currentPRIndex)
 
-
+        path = os.path.join(self.db_path, "page_range_metadata.txt")
+        with open(path) as fs:
+            for line in fs:
+                table_name, pr_index, tailRecordsRemaining = line.split(",")
+                self.tailRecordsSinceLastMerge.append([table_name, int(pr_index), int(tailRecordsRemaining)])
