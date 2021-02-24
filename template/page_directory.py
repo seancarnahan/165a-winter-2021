@@ -10,7 +10,7 @@ class PageDirectory:
 
     #the page range has been updated, update the dirty bit tracker
     def update_page_range_dirty_bit_tracker(self, page_range):
-        pr_buffer_pool_index = self.bufferPool.get_page_range_index_in_buffer_pool(table_name, page_range)
+        pr_buffer_pool_index = self.bufferPool.get_page_range_index_in_buffer_pool(self.table_name, page_range)
 
         self.bufferPool.dirtyBitTracker[pr_buffer_pool_index] = True
 
@@ -34,16 +34,16 @@ class PageDirectory:
         #attempt to add record PageRange
         if currPageRange.insertBaseRecord(record, recordLocation):
             #unload the pin
-            self.bufferPool.releasePin(table_name, locPRIndex)
+            self.bufferPool.releasePin(self.table_name, locPRIndex)
 
             # update dirty bit tracker
-            self.update_page_range_dirty_bit_tracker(currPageRange)
+            self.update_page_range_dirty_bit_tracker(locPRIndex)
 
             # successfully added a record into pageRange that is loaded in buffer pool
             return True
         else:
             #if it fails unload the pin
-            self.bufferPool.releasePin(table_name, locPRIndex)
+            self.bufferPool.releasePin(self.table_name, locPRIndex)
 
             #Page Range is full: ask buffer Pool to initialize a new Page Range
             self.bufferPool.addNewPageRangeToDisk(self.table_name)
@@ -61,7 +61,7 @@ class PageDirectory:
             currPageRange.insertBaseRecord(record, recordLocation)
 
             #unload the pin
-            self.bufferPool.releasePin(table_name, locPRIndex)
+            self.bufferPool.releasePin(self.table_name, locPRIndex)
 
             # update dirty bit tracker
             self.update_page_range_dirty_bit_tracker(currPageRange)
@@ -71,8 +71,6 @@ class PageDirectory:
 
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, baseRID, record):
-        #update dirty bit tracker
-        update_page_range_dirty_bit_tracker()
 
         #List of elements that make up the RID
         baseRIDLoc = self.getRecordLocation(baseRID)
@@ -86,6 +84,9 @@ class PageDirectory:
         #initialize record location
         recordLocation = [recordType, locPRIndex]
 
+        #update dirty bit tracker
+        self.update_page_range_dirty_bit_tracker(locPRIndex)
+
         #load pageRange into bufferPool if needed
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
@@ -93,10 +94,10 @@ class PageDirectory:
         ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation)
 
         #decrement pin
-        self.bufferPool.releasePin(table_name, locPRIndex)
+        self.bufferPool.releasePin(self.table_name, locPRIndex)
 
         # update dirty bit tracker
-        self.update_page_range_dirty_bit_tracker(currPageRange)
+        self.update_page_range_dirty_bit_tracker(locPRIndex)
 
         return ridOfTailRecord
 

@@ -96,7 +96,7 @@ class BufferPool:
 
     def releasePin(self, table_name, page_range_index):
         #decrement pin
-        page_range_index_in_BP = get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
         self.pins[page_range_index_in_BP] -= 1
 
     def get_page_range_index_in_buffer_pool(self, table_name, page_range_index):
