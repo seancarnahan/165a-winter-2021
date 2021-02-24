@@ -1,6 +1,7 @@
-from copy import copy
+import copy
 
 from template.config import *
+from template.page_range import PageRange  # import for merging
 from template.physical_pages import PhysicalPages
 from template.table import Table
 from template.buffer_pool import BufferPool
@@ -107,27 +108,26 @@ class Database:
         method to merge on some granularity
         """
 
-        # get the table from the merge queue
-        table = Table("placeholder", 4, 0, BufferPool())
+        # get the table from the bufferpool (which has determined the order)
+        table = Table("placeholder", 4, 0, BufferPool()) # placeholder
+        range_to_merge = PageRange(4, "placeholder", 0)  # placeholder
 
-        # do not merge indirection column
-        # TODO: Get BPs and TPs of a set of PageRange(s)
-        recordType, locPRIndex, locBPIndex, locPhyPageIndex = table.page_directory.getRecordLocation()
-        orig_BP = table.page_directory.getPhysicalPages(recordType, locPRIndex, locBPIndex,
-                                                        locPhyPageIndex)
+        for orig_bp in range_to_merge.basePages:
+            # do not copy indirection column, do reference to orig
 
-        # init a new BP instance
-        consolidated_BP = PhysicalPages(table.num_columns)
+            # init a new BP instance to consolidate into
+            consolidated_BP = PhysicalPages(table.num_columns)
 
-        # non-indirection columns can be copied because they can't be concurrently updated
-        # copy things over
-        consolidated_BP.numOfRecords = copy(orig_BP.numOfRecords)
-        for i in enumerate(consolidated_BP.physicalPages):
-            if i != INDIRECTION_COLUMN:
-                consolidated_BP.physicalPages[i] = copy(orig_BP.physicalPages[i])
+            # non-indirection columns can be copied because they aren't concurrently updated
+            # deepcopy() is used to copy an object and child objects within it
+            # copy() shallow copies an object but its children are references to the original
+            consolidated_BP.numOfRecords = copy.deepcopy(orig_bp.numOfRecords)
+            for i in enumerate(consolidated_BP.physicalPages):
+                if i != INDIRECTION_COLUMN:
+                    consolidated_BP.physicalPages[i] = copy.deepcopy(orig_bp.physicalPages[i])
 
-        # reference the original indirection column to account for concurrent updates
-        consolidated_BP.physicalPages[INDIRECTION_COLUMN] = orig_BP.physicalPages[INDIRECTION_COLUMN]
+            # reference the original indirection column to account for concurrent updates
+            consolidated_BP.physicalPages[INDIRECTION_COLUMN] = orig_bp.physicalPages[INDIRECTION_COLUMN]
 
-        # TODO: replace data columns in consolidated_BP with latest TP data
-        #  Reverse iterate Tail Page records
+            # TODO: replace data columns in consolidated_BP with latest TP data
+            #  Reverse iterate Tail Page records

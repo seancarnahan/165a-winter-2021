@@ -32,12 +32,12 @@ class MergeThread(threading.Thread):
 
     def thread_start(self):
         """
-        Starts merge thread when called instead of when initialized
+        Starts merge thread when called instead of when initialized. Call when opening the Database.
         """
         self.thread.start()  # Start the execution
 
     def run(self):
-        """ Method that runs forever """
+        """ Method that begins waiting and merging within the Database """
 
         self.exit_request.clear()
 
@@ -48,15 +48,14 @@ class MergeThread(threading.Thread):
 
         """
         trigger merge based on either a) time or b) unmergedTailRecords threshold
-        sort buffer_pool.merge_queue by number of unmerged tail records
-        grab head from queue
-        head has table_name and PR to merge on
+        get table_name and PRidx from buffer_pool
         merge all tail pages in that PR
         reset number of unmerged tail records belonging to that table_name.PR to 0
         """
+        # call buffer_pool.resetTailPageRecordCount(table_name, page_range_index)
 
     def stop_thread(self):
         """
-        sets the exit_request event flag to True so thread will terminate asap
+        Sets the exit_request event flag to True so thread will terminate asap. Call when closing the Database.
         """
         self.exit_request.set()  # set event flag to True
