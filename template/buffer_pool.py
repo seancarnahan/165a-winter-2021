@@ -27,6 +27,9 @@ class BufferPool:
         # DB initializes a value every time a new table gets created
         self.numOfColumns = {}
 
+        #list of [tableName, PR, tailRecordsSinceLastMerge]
+        self.tailRecordsSinceLastMerge = []
+
         """ 
         BELOW: State of current Page Ranges in BufferPool
         """
@@ -41,6 +44,21 @@ class BufferPool:
 
         if not os.path.exists(self.db_path):
             os.mkdir(self.db_path)
+    """
+    input: None
+    Output: [TableName, PageRange]
+    
+    # if nothing to merge return True 
+    """
+    def getPageRangeForMerge(self):
+        #sort the list of lists by 3rd element: tailRecordsSinceLastMerge
+        self.tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
+
+        #get the greatest num of tailRecordsSinceLastMerge
+        self.tailRecordsSinceLastMerge[-1]
+
+        #get TableName and
+
 
     def setDatabaseLocation(self, path: str):
         if path[0:2] == "./":
