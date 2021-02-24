@@ -2,6 +2,7 @@ from template.config import *
 from template.page_range import PageRange
 from shutil import rmtree # used to remove directories
 import sys
+import copy
 import os
 import pickle
 
@@ -27,7 +28,7 @@ class BufferPool:
         # DB initializes a value every time a new table gets created
         self.numOfColumns = {}
 
-        #list of [tableName, PR, tailRecordsSinceLastMerge]
+        #list of [tableName, PR_index_rel_to_table, tailRecordsSinceLastMerge]
         self.tailRecordsSinceLastMerge = []
 
         """ 
@@ -52,13 +53,35 @@ class BufferPool:
     """
     def getPageRangeForMerge(self):
         #sort the list of lists by 3rd element: tailRecordsSinceLastMerge
-        self.tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
+        sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.sorted_tailRecordsSinceLastMerge)
+        sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
 
         #get the greatest num of tailRecordsSinceLastMerge
-        self.tailRecordsSinceLastMerge[-1]
+        greastestNumOfTailRecs = self.sorted_tailRecordsSinceLastMerge[-1]
 
-        #get TableName and
+        #Don't need to do merge if no changes have been made to tail records
+        if greastestNumOfTailRecs[2] == 0:
+            return True
 
+        #get TableName and page range index
+        return self.greastestNumOfTailRecs[0:2]
+
+    """
+    get the desired index in tailRecordsSinceLastMerge based off the params
+    """
+    def get_tailRecordsSinceLastMerge_index(self,table_name, page_range_index):
+
+        for i in range(len(self.tailRecordsSinceLastMerge)):
+            curr = self.tailRecordsSinceLastMerge[i]
+
+            if curr[0] == table_name and curr[1] == page_range_index:
+                return i
+        print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
+        return False
+
+    def resetTailPageRecordCount(self, table_name, page_range_index):
+        index = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        self.tailRecordsSinceLastMerge[index][2] = 0
 
     def setDatabaseLocation(self, path: str):
         if path[0:2] == "./":
@@ -178,7 +201,6 @@ class BufferPool:
     # This will only be called during inserts
 
     #create a new PageRange on disk
-    #TODO: Long
     """
     def addNewPageRangeToDisk(self, table_name):
 
@@ -186,6 +208,8 @@ class BufferPool:
 
         num_of_cols = self.numOfColumns[table_name]
         page_range_index = self.currPageRangeIndexes[table_name]
+
+        self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
 
         page_range = PageRange(num_of_cols, table_name, page_range_index)
 

@@ -89,7 +89,8 @@ class PageRange:
         while((maxBasePageSize + self.num_columns) <=  MAX_PAGE_RANGE_SIZE):
             maxBasePageSize += self.num_columns
 
-        return maxBasePageSize / self.num_columns
+        # return maxBasePageSize / self.num_columns
+        return 2
 
     #True if Page Range has capacity for another Base Page, if not PageDir should create another PageRange
     def hasCapacity(self):

@@ -93,6 +93,9 @@ class PageDirectory:
         #try to add record to PageRange
         ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation)
 
+        tailRecordsSinceLastMergeIndex = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name, locPRIndex)
+        self.bufferPool.tailRecordsSinceLastMerge[tailRecordsSinceLastMergeIndex][2] += 1
+
         #decrement pin
         self.bufferPool.releasePin(self.table_name, locPRIndex)
 
