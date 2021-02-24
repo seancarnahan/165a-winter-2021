@@ -1,7 +1,6 @@
 import threading
 import time
 
-from template.db import Database
 
 
 class MergeThread(threading.Thread):
@@ -13,7 +12,7 @@ class MergeThread(threading.Thread):
     until the application exits OR the db is closed.
     """
 
-    def __init__(self, db: Database, interval=1):
+    def __init__(self, db, interval=1):
         """
         MergeThread Constructor
 
