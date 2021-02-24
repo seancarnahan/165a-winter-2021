@@ -2,6 +2,7 @@ import threading
 import time
 
 
+
 class MergeThread(threading.Thread):
     """
     Threading example class edited from:
@@ -32,22 +33,29 @@ class MergeThread(threading.Thread):
 
     def thread_start(self):
         """
-        Starts merge thread when called instead of when initialized
+        Starts merge thread when called instead of when initialized. Call when opening the Database.
         """
         self.thread.start()  # Start the execution
 
     def run(self):
-        """ Method that runs forever """
+        """ Method that begins waiting and merging within the Database """
 
         self.exit_request.clear()
 
         while not self.exit_request.isSet():
-            time.sleep(self.interval)
+
             print('\nInitiating a merge...')
-            self.db.merge_placeholder()  # placeholder for db merge method
+            merge_data = self.db.bufferPool.getPageRangeForMerge()  # get the info to start a merge
+
+            if merge_data is not True:  # PR to merge
+                # have PR to merge, start merge
+                self.db.merge(table_name=merge_data[0], page_range_index=merge_data[1])
+            # else: merge_data is True so no PRs to merge
+
+            time.sleep(self.interval)
 
     def stop_thread(self):
         """
-        sets the exit_request event flag to True so thread will terminate asap
+        Sets the exit_request event flag to True so thread will terminate asap. Call when closing the Database.
         """
         self.exit_request.set()  # set event flag to True

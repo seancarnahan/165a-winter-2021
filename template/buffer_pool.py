@@ -28,7 +28,7 @@ class BufferPool:
         # DB initializes a value every time a new table gets created
         self.numOfColumns = {}
 
-        #list of [tableName, PR_index_rel_to_table, tailRecordsSinceLastMerge]
+        # list of [tableName, PR_index_rel_to_table, tailRecordsSinceLastMerge]
         self.tailRecordsSinceLastMerge = []
 
         """ 
@@ -52,24 +52,28 @@ class BufferPool:
     # if nothing to merge return True 
     """
     def getPageRangeForMerge(self):
-        #sort the list of lists by 3rd element: tailRecordsSinceLastMerge
-        sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.sorted_tailRecordsSinceLastMerge)
+        # sort the list of lists by 3rd element: tailRecordsSinceLastMerge
+        sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.tailRecordsSinceLastMerge)
         sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
 
-        #get the greatest num of tailRecordsSinceLastMerge
-        greastestNumOfTailRecs = self.sorted_tailRecordsSinceLastMerge[-1]
+        # Don't need to merge
+        if len(sorted_tailRecordsSinceLastMerge) == 0:
+            return True
 
-        #Don't need to do merge if no changes have been made to tail records
+        # get the greatest num of tailRecordsSinceLastMerge
+        greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
+
+        # Don't need to do merge if no changes have been made to tail records
         if greastestNumOfTailRecs[2] == 0:
             return True
 
-        #get TableName and page range index
-        return self.greastestNumOfTailRecs[0:2]
+        # get TableName and page range index
+        return greastestNumOfTailRecs[0:2]
 
     """
     get the desired index in tailRecordsSinceLastMerge based off the params
     """
-    def get_tailRecordsSinceLastMerge_index(self,table_name, page_range_index):
+    def get_tailRecordsSinceLastMerge_index(self, table_name, page_range_index):
 
         for i in range(len(self.tailRecordsSinceLastMerge)):
             curr = self.tailRecordsSinceLastMerge[i]
