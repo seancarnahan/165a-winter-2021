@@ -329,11 +329,10 @@ class BufferPool:
     def order_LFUs(self):
         # requestsPerPRCopy = requestsPerPR.copy()
 
-        mappedList = list(map(lambda x: (x, self.requestsPerPR.index(x)), self.requestsPerPR))
-
+        mappedList = [[requests, idx] for idx, requests in enumerate(self.requestsPerPR)]
         mappedList.sort(key=lambda tup: tup[0])
 
-        page_ranges_sorted_by_LFU = list(map(lambda tup: tup[0], mappedList))
+        page_ranges_sorted_by_LFU = list(map(lambda tup: tup[1], mappedList))
 
         return page_ranges_sorted_by_LFU
 
