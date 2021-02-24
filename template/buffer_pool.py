@@ -2,6 +2,7 @@ from template.config import *
 from template.page_range import PageRange
 from shutil import rmtree # used to remove directories
 import sys
+import copy
 import os
 import pickle
 
@@ -52,10 +53,11 @@ class BufferPool:
     """
     def getPageRangeForMerge(self):
         #sort the list of lists by 3rd element: tailRecordsSinceLastMerge
-        self.tailRecordsSinceLastMerge.sort(key=lambda x: x[2]) #turn this into a copy
+        sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.sorted_tailRecordsSinceLastMerge)
+        sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
 
         #get the greatest num of tailRecordsSinceLastMerge
-        greastestNumOfTailRecs = self.tailRecordsSinceLastMerge[-1]
+        greastestNumOfTailRecs = self.sorted_tailRecordsSinceLastMerge[-1]
 
         #Don't need to do merge if no changes have been made to tail records
         if greastestNumOfTailRecs[2] == 0:
@@ -64,7 +66,9 @@ class BufferPool:
         #get TableName and page range index
         return self.greastestNumOfTailRecs[0:2]
 
-
+    """
+    get the desired index in tailRecordsSinceLastMerge based off the params
+    """
     def get_tailRecordsSinceLastMerge_index(self,table_name, page_range_index):
 
         for i in range(len(self.tailRecordsSinceLastMerge)):
