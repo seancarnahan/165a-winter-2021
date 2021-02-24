@@ -27,7 +27,7 @@ class BufferPool:
         # DB initializes a value every time a new table gets created
         self.numOfColumns = {}
 
-        #list of [tableName, PR, tailRecordsSinceLastMerge]
+        #list of [tableName, PR_index_rel_to_table, tailRecordsSinceLastMerge]
         self.tailRecordsSinceLastMerge = []
 
         """ 
@@ -52,12 +52,33 @@ class BufferPool:
     """
     def getPageRangeForMerge(self):
         #sort the list of lists by 3rd element: tailRecordsSinceLastMerge
-        self.tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
+        self.tailRecordsSinceLastMerge.sort(key=lambda x: x[2]) #turn this into a copy
 
         #get the greatest num of tailRecordsSinceLastMerge
-        self.tailRecordsSinceLastMerge[-1]
+        greastestNumOfTailRecs = self.tailRecordsSinceLastMerge[-1]
 
-        #get TableName and
+        #Don't need to do merge if no changes have been made to tail records
+        if greastestNumOfTailRecs[2] == 0:
+            return True
+
+        #get TableName and page range index
+        return self.greastestNumOfTailRecs[0:2]
+
+
+    def get_tailRecordsSinceLastMerge_index(self,table_name, page_range_index):
+
+        for i in range(len(self.tailRecordsSinceLastMerge)):
+            curr = self.tailRecordsSinceLastMerge[i]
+
+            if curr[0] == table_name and curr[1] == page_range_index:
+                return i
+        print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
+        return False
+
+    # TODO
+    def resetTailPageRecordCount(self, table_name, page_range_index):
+        pass
+
 
 
     def setDatabaseLocation(self, path: str):
