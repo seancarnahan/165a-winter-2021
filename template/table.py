@@ -134,30 +134,17 @@ class Table:
             prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
             prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-<<<<<<< Updated upstream
-        # Step 5: update base page with location of new tail record
-=======
-            # decrement pin
-            self.bufferPool.releasePin(table_name, locPRIndex)
-
         #Step 5: update base page with location of new tail record
->>>>>>> Stashed changes
         recordType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
         basePagePhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locBPIndex,
                                                                      locPhyPageIndex).physicalPages
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-<<<<<<< Updated upstream
-    # input currValues and update should both be lists of integers of equal lengths
-    # output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
-=======
-        # decrement pin
-        self.bufferPool.releasePin(table_name, locPRIndex)
+
 
     #input currValues and update should both be lists of integers of equal lengths
     #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
->>>>>>> Stashed changes
     def getUpdatedRow(self, currValues, update):
         updatedValues = []
 
