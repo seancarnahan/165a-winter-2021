@@ -8,6 +8,12 @@ class PageDirectory:
         self.bufferPool = bufferPool
         self.table_name = table_name
 
+    #the page range has been updated, update the dirty bit tracker
+    def update_page_range_dirty_bit_tracker(self, page_range):
+        pr_buffer_pool_index = self.bufferPool.get_page_range_index_in_buffer_pool(self.table_name, page_range)
+
+        self.bufferPool.dirtyBitTracker[pr_buffer_pool_index] = True
+
     #returns True when its a success
     def insertBaseRecord(self, record):
         #record type is basePage
@@ -19,7 +25,6 @@ class PageDirectory:
         if locPRIndex == -1:
             locPRIndex = 0
 
-
         #initialize record location
         recordLocation = [recordType, locPRIndex]
 
@@ -28,9 +33,18 @@ class PageDirectory:
 
         #attempt to add record PageRange
         if currPageRange.insertBaseRecord(record, recordLocation):
-            #successfully added a record into pageRange that is loaded in buffer pool
+            #unload the pin
+            self.bufferPool.releasePin(self.table_name, locPRIndex)
+
+            # update dirty bit tracker
+            self.update_page_range_dirty_bit_tracker(locPRIndex)
+
+            # successfully added a record into pageRange that is loaded in buffer pool
             return True
         else:
+            #if it fails unload the pin
+            self.bufferPool.releasePin(self.table_name, locPRIndex)
+
             #Page Range is full: ask buffer Pool to initialize a new Page Range
             self.bufferPool.addNewPageRangeToDisk(self.table_name)
 
@@ -46,10 +60,15 @@ class PageDirectory:
             #Recursive -> attempt to add record to PageRange
             currPageRange.insertBaseRecord(record, recordLocation)
 
+            #unload the pin
+            self.bufferPool.releasePin(self.table_name, locPRIndex)
+
+            # update dirty bit tracker
+            self.update_page_range_dirty_bit_tracker(currPageRange)
+
             return True
 
 
-    #TODO: for merge -> we can get capacity of tail records, once it reaches its max then we can merge
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, baseRID, record):
 
@@ -65,16 +84,28 @@ class PageDirectory:
         #initialize record location
         recordLocation = [recordType, locPRIndex]
 
+        #update dirty bit tracker
+        self.update_page_range_dirty_bit_tracker(locPRIndex)
+
         #load pageRange into bufferPool if needed
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #try to add record to PageRange
-        return currPageRange.insertTailRecord(record, recordLocation)
+        ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation)
+
+        #decrement pin
+        self.bufferPool.releasePin(self.table_name, locPRIndex)
+
+        # update dirty bit tracker
+        self.update_page_range_dirty_bit_tracker(locPRIndex)
+
+        return ridOfTailRecord
 
 
     def getPhysicalPages(self, recordType, locPRIndex, loc_PIndex, locPhyPageIndex):
         #load pageRange
         pageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
+
 
         if recordType == 1:
             #base Page

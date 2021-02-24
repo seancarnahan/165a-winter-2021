@@ -134,15 +134,17 @@ class Table:
             prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
             prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-        # Step 5: update base page with location of new tail record
+        #Step 5: update base page with location of new tail record
         recordType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
         basePagePhysicalPages = self.page_directory.getPhysicalPages(recordType, locPRIndex, locBPIndex,
                                                                      locPhyPageIndex).physicalPages
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
 
-    # input currValues and update should both be lists of integers of equal lengths
-    # output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
+
+
+    #input currValues and update should both be lists of integers of equal lengths
+    #output: for any value in update that is not "none", that value will overwrite the corresponding currValues, and then return this new list
     def getUpdatedRow(self, currValues, update):
         updatedValues = []
 
