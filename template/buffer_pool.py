@@ -96,7 +96,7 @@ class BufferPool:
 
     def releasePin(self, table_name, page_range_index):
         #decrement pin
-        page_range_index_in_BP = get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
         self.pins[page_range_index_in_BP] -= 1
 
     def get_page_range_index_in_buffer_pool(self, table_name, page_range_index):
@@ -237,16 +237,21 @@ class BufferPool:
     must return something, make sure to await on this function
     """
     def remove_LFU_page(self):
-        #keep looping until a page is removed
-        while True:
-            # find least recently used pageRanges
-            ordered_LFUs = self.order_LFUs()
+        # find least recently used pageRanges
+        ordered_LFUs = self.order_LFUs()
 
-            for i in range(len(ordered_LFUs)):
-                if self.check_if_pr_not_in_use(ordered_LFUs[i]):
-                    #remove page range
-                    self.removePageRangeFromBufferPool(ordered_LFUs[i])
-        return True
+        for i in range(len(ordered_LFUs)):
+            if self.check_if_pr_not_in_use(ordered_LFUs[i]):
+                # remove page range
+                self.removePageRangeFromBufferPool(ordered_LFUs[i])
+
+                break
+
+
+        # #keep looping until a page is removed
+        # while True:
+        #
+        # return True
 
     """
     :param index: the index of the page range in buffer pool
@@ -256,7 +261,7 @@ class BufferPool:
     def removePageRangeFromBufferPool(self, index):
 
         #check for a dirty bit, if true, write to disk
-        if dirtyBitTracker[index] == True:
+        if self.dirtyBitTracker[index] == True:
             self.write_to_disk(self.pageRanges[index])
 
         try:
