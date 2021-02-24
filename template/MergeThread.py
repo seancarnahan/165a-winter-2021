@@ -1,6 +1,8 @@
 import threading
 import time
 
+from template.db import Database
+
 
 class MergeThread(threading.Thread):
     """
@@ -11,7 +13,7 @@ class MergeThread(threading.Thread):
     until the application exits OR the db is closed.
     """
 
-    def __init__(self, db, interval=1):
+    def __init__(self, db: Database, interval=1):
         """
         MergeThread Constructor
 
@@ -44,13 +46,12 @@ class MergeThread(threading.Thread):
         while not self.exit_request.isSet():
 
             print('\nInitiating a merge...')
-            table_name, page_range_index = self.db.bufferPool.getPageRangeForMerge()  # get the info to start a merge
-            if table_name == "empty":  # change this statement
-                # there are no PageRanges to do a merge, ignore and wait
-                pass
-            else:
+            merge_data = self.db.bufferPool.getPageRangeForMerge()  # get the info to start a merge
+
+            if merge_data is not True:  # PR to merge
                 # have PR to merge, start merge
-                self.db.merge(table_name, page_range_index)
+                self.db.merge(table_name=merge_data[0], page_range_index=merge_data[1])
+            # else: merge_data is True so no PRs to merge
 
             time.sleep(self.interval)
 
