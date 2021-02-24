@@ -48,6 +48,7 @@ class Table:
         for i in range(RECORD_COLUMN_OFFSET, self.num_all_columns):
             columns.append(physicalPages.physicalPages[i].getRecord(locPhyPageIndex))
 
+        self.page_directory.bufferPool.releasePin(self.table_name, locPRIndex)
         record = Record(key, indirection, timeStamp, encoding, columns)
         record.RID = RID
 
@@ -133,6 +134,7 @@ class Table:
                                                                                locPhyPageIndex).physicalPages
             prevTailRecordPhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
             prevTailRecordPhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
+            self.page_directory.bufferPool.releasePin(self.table_name, locPRIndex)
 
         #Step 5: update base page with location of new tail record
         recordType, locPRIndex, locBPIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
@@ -140,6 +142,7 @@ class Table:
                                                                      locPhyPageIndex).physicalPages
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
+        self.page_directory.bufferPool.releasePin(self.table_name, locPRIndex)
 
 
 
