@@ -75,11 +75,9 @@ class BufferPool:
         print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
         return False
 
-    # TODO
     def resetTailPageRecordCount(self, table_name, page_range_index):
-        pass
-
-
+        index = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        self.tailRecordsSinceLastMerge[index][2] = 0
 
     def setDatabaseLocation(self, path: str):
         if path[0:2] == "./":
@@ -199,7 +197,6 @@ class BufferPool:
     # This will only be called during inserts
 
     #create a new PageRange on disk
-    #TODO: Long
     """
     def addNewPageRangeToDisk(self, table_name):
 
@@ -207,6 +204,8 @@ class BufferPool:
 
         num_of_cols = self.numOfColumns[table_name]
         page_range_index = self.currPageRangeIndexes[table_name]
+
+        self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
 
         page_range = PageRange(num_of_cols, table_name, page_range_index)
 
