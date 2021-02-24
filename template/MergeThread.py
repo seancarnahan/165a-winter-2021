@@ -42,17 +42,17 @@ class MergeThread(threading.Thread):
         self.exit_request.clear()
 
         while not self.exit_request.isSet():
-            time.sleep(self.interval)
-            print('\nInitiating a merge...')
-            self.db.merge_placeholder()  # placeholder for db merge method
 
-        """
-        trigger merge based on either a) time or b) unmergedTailRecords threshold
-        get table_name and PRidx from buffer_pool
-        merge all tail pages in that PR
-        reset number of unmerged tail records belonging to that table_name.PR to 0
-        """
-        # call buffer_pool.resetTailPageRecordCount(table_name, page_range_index)
+            print('\nInitiating a merge...')
+            table_name, page_range_index = self.db.bufferPool.getPageRangeForMerge()  # get the info to start a merge
+            if table_name == "empty":  # change this statement
+                # there are no PageRanges to do a merge, ignore and wait
+                pass
+            else:
+                # have PR to merge, start merge
+                self.db.merge(table_name, page_range_index)
+
+            time.sleep(self.interval)
 
     def stop_thread(self):
         """

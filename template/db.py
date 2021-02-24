@@ -103,31 +103,73 @@ class Database:
         for table in self.tables:
             print("merging on tables: " + table.table_name)
 
-    def merge(self):
+    def merge(self, table_name: str, page_range_index: int):
         """
         method to merge on some granularity
+
+        :type table_name: str
+        :param table_name: The Table in which the merge is performed
+        :type page_range_index: int
+        :param page_range_index: The index of the PageRange whose pages are merging
         """
 
-        # get the table from the bufferpool (which has determined the order)
-        table = Table("placeholder", 4, 0, BufferPool()) # placeholder
-        range_to_merge = PageRange(4, "placeholder", 0)  # placeholder
+        # get the table from the buffer_pool (which has determined the order)
+        range_to_merge = self.bufferPool.read_from_disk(table_name=table_name, page_range_index=page_range_index)
+        merge_table = self.get_table(table_name)  # for getting base records
 
-        for orig_bp in range_to_merge.basePages:
-            # do not copy indirection column, do reference to orig
+        '''
+        Step: Copy the Base Pages
+        do not copy indirection column, do reference to orig
+        the indirection column must be the same reference to ensure a contention-free solution
+        '''
+        for i, orig_bp in enumerate(range_to_merge.basePages):
 
             # init a new BP instance to consolidate into
-            consolidated_BP = PhysicalPages(table.num_columns)
+            consolidated_BP = PhysicalPages(range_to_merge.num_columns)
 
             # non-indirection columns can be copied because they aren't concurrently updated
             # deepcopy() is used to copy an object and child objects within it
             # copy() shallow copies an object but its children are references to the original
             consolidated_BP.numOfRecords = copy.deepcopy(orig_bp.numOfRecords)
-            for i in enumerate(consolidated_BP.physicalPages):
-                if i != INDIRECTION_COLUMN:
-                    consolidated_BP.physicalPages[i] = copy.deepcopy(orig_bp.physicalPages[i])
+            for j in enumerate(consolidated_BP.physicalPages):
+                if j != INDIRECTION_COLUMN:
+                    consolidated_BP.physicalPages[j] = copy.deepcopy(orig_bp.physicalPages[j])
 
             # reference the original indirection column to account for concurrent updates
             consolidated_BP.physicalPages[INDIRECTION_COLUMN] = orig_bp.physicalPages[INDIRECTION_COLUMN]
 
-            # TODO: replace data columns in consolidated_BP with latest TP data
-            #  Reverse iterate Tail Page records
+            # replace the old base page with the new one
+            range_to_merge.basePages[i] = consolidated_BP
+
+        # all base pages should be copies now
+
+        '''
+        Step: Overwrite the new Base Pages data
+        '''
+        # Set for hashing tail records with same BaseRID, no duplicates
+        seenUpdatesSet = set()
+
+        # TODO: only reverse iterate until reaching the latest merged tail record
+        #  not all the tail records
+        # reverse iterate over all tail pages in Page Range
+        for page_num, tail_page in reversed(list(enumerate(range_to_merge.tailPages))):
+            tail_page_records = tail_page.getAllRecords()
+
+            # reverse iterate over all records within this tail page
+            for i, record in reversed(tail_page_records):
+                if not record[BASE_RID_COLUMN] in seenUpdatesSet:
+                    # add the BaseRID as the key to the "hashmap"
+                    seenUpdatesSet.add(record[BASE_RID_COLUMN])
+
+                    # get the locations of the new Base Pages and records
+                    location_list = merge_table.page_directory.getRecordLocation(record[BASE_RID_COLUMN])
+                    base_index = location_list[3] % 1000
+                    base_page_index = location_list[2]
+
+                    # self is new base record, change BaseRID accordingly
+                    record[BASE_RID_COLUMN] = record[RID_COLUMN]
+                    range_to_merge.basePages[base_page_index].replaceRecord(base_index, record)
+
+        # finished iterating backwards over the tail pages, base pages are now consolidated
+        # reset the tailRecordsSinceLastMerge counter for this PageRange
+        self.bufferPool.resetTailPageRecordCount(table_name, page_range_index)
