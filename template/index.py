@@ -131,33 +131,25 @@ class Index:
 
         :param column_number: int
         """
+
+        if column_number < RECORD_COLUMN_OFFSET:
+            column_number += RECORD_COLUMN_OFFSET
+
         try:
             self.indices[column_number] = defaultdict(list)
         except IndexError:
             raise InvalidColumnError(column_number)
 
-        index = self.indices[column_number]
-
         bufferpool = self.table.page_directory.bufferPool
         latestPageRangeIndex = bufferpool.getCurrPageRangeIndex(self.table.table_name)
-
         for i in range(latestPageRangeIndex+1):
             pageRange = bufferpool.loadPageRange(self.table.table_name, i)
             for basePage in pageRange.basePages:
-                for i in range(basePage.numOfRecords):
-                    rid = basePage.physicalPages[RID_COLUMN].getRecord(i)
+                for j in range(basePage.numOfRecords):
+                    rid = basePage.physicalPages[RID_COLUMN].getRecord(j)
                     value = self.table.getRecord(rid).columns[column_number-RECORD_COLUMN_OFFSET]
-                    index[value].append(rid)
-
-        sortedKeys = list(index)
-
-        for key1, key2 in zip(sortedKeys[:-1], sortedKeys[1:]):
-            index[key1] = [index[key1], key2]
-
-        if len(sortedKeys) != 0:
-            index[sortedKeys[-1]] = [index[sortedKeys[-1]], None]
-            self.createSeeds(column_number)
-
+                    self.insertIntoIndex(column_number, rid, value)
+            bufferpool.releasePin(self.table.table_name, i)
         return True
 
     def drop_index(self, column_number):
