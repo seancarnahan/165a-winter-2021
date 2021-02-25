@@ -40,6 +40,45 @@ class PhysicalPages:
 
         return RID
 
+    def getPageRecord(self, record_index):
+        """
+        :param record_index: index of a record in the page (0-999)
+        :return: List of int of length num_columns + RECORD_COLUMN_OFFSET
+        """
+        record = []
+
+        for i in range(len(self.physicalPages)):
+            record.append(self.physicalPages[i].getRecord(record_index))
+
+        return record
+
+    def getAllRecords(self):
+        """
+        :return: List of records (which are lists containing int)
+        """
+        page_records = []
+
+        for record_index in range(self.numOfRecords):
+            page_records.append(self.getPageRecord(record_index))
+
+        return page_records
+
+    def replaceRecord(self, record_index, record):
+        """
+        Replaces the values of a record for all data pages.
+
+        :type record_index: int
+        :param record_index: index within the page to replace at
+        :type record: list
+        :param record: List of size num_columns + RECORD_COLUMN_OFFSET
+        """
+
+        # do not replace meta data record values
+        # note: possible point of failure here
+        for col, page in enumerate(self.physicalPages):
+            if col >= RECORD_COLUMN_OFFSET:
+                self.physicalPages[col].replaceRecord(record_index, record[col])
+
     def hasCapacity(self):
         if self.numOfRecords >= PAGE_SIZE:
             #page is full

@@ -28,7 +28,6 @@ for _ in range(10):
 keys = sorted(list(records.keys()))
 for key in keys:
     print(records[key])
-    print(records[key])
 
 for key in keys:
     record = query.select(key, 0, [1, 1, 1, 1, 1])[0]
