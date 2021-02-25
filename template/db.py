@@ -1,11 +1,10 @@
 import copy
 
+from template.MergeThread import MergeThread
+from template.buffer_pool import BufferPool
 from template.config import *
-from template.page_range import PageRange  # import for merging
 from template.physical_pages import PhysicalPages
 from template.table import Table
-from template.buffer_pool import BufferPool
-from template.MergeThread import MergeThread
 
 
 class TableExistsError(Exception):
@@ -56,7 +55,7 @@ class Database:
         try:
             self.bufferPool.createTableDirectory(name)
         except FileExistsError:
-            raise TableExistsError(name)
+            raise TableExistsError(name) from None
 
         self.bufferPool.currPageRangeIndexes[name] = -1
         self.bufferPool.numOfColumns[name] = num_columns

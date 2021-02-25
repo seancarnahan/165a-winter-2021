@@ -1,4 +1,3 @@
-from template.page import Page
 from template.index import Index
 from template.page_directory import PageDirectory
 from template.record import Record

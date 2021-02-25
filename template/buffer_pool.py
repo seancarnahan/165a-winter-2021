@@ -1,10 +1,10 @@
 from template.config import *
 from template.page_range import PageRange
 from shutil import rmtree # used to remove directories
-import sys
 import copy
 import os
 import pickle
+
 
 class BufferPool:
 

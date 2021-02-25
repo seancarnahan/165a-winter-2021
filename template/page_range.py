@@ -1,6 +1,7 @@
 from template.physical_pages import PhysicalPages
 from template.config import *
 
+
 class PageRange:
 
     def __init__(self, num_columns, table_name, page_range_index):

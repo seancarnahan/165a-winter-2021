@@ -1,6 +1,7 @@
 from template.config import *
 from template.page import Page
 
+
 #has a physical page for every column in the table
 class PhysicalPages:
     def __init__(self, num_columns):

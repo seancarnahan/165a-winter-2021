@@ -1,5 +1,3 @@
-from template.page_range import PageRange
-
 class PageDirectory:
 
     #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
