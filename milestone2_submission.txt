@@ -1,0 +1,6 @@
+Tester Run Times:
+
+Num of Records          m2_tester_part1         m2_tester_part2
+1000                    8.44 secs               2.85 secs
+2001                    15.58 secs              4.06 secs
+10000                   1.39.06 mins            26.03 secs
