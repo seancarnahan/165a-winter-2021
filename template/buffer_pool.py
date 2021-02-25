@@ -63,8 +63,8 @@ class BufferPool:
         # get the greatest num of tailRecordsSinceLastMerge
         greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
 
-        # Don't need to do merge if no changes have been made to tail records
-        if greastestNumOfTailRecs[2] == 0:
+        # Don't need to do merge if less than 100 tail records
+        if greastestNumOfTailRecs[2] <= 100:
             return True
 
         # get TableName and page range index
@@ -84,7 +84,8 @@ class BufferPool:
         return False
 
     def resetTailPageRecordCount(self, table_name, page_range_index):
-        index = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+        index = self.get_tailRecordsSinceLastMerge_index(table_name, page_range_index)
+
         self.tailRecordsSinceLastMerge[index][2] = 0
 
     def setDatabaseLocation(self, path: str):
