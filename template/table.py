@@ -114,21 +114,23 @@ class Table:
         """
 
 
-
         # Step 1: get the updated Values
         baseRecord = self.getRecord(RID)
         prevUpdateRecord = None
         updatedValues = None
+        prevRecordColData = None # This is used for abort in transaction
 
         if baseRecord.indirection == 0:
             # base Record has not been updated
+            prevRecordColData = baseRecord.columns  # saved for abort
 
-            updatedValues = self.getUpdatedRow(baseRecord.columns, values)
+            updatedValues = self.getUpdatedRow(prevRecordColData, values)
         else:
             # base Record has been updated
             prevUpdateRecord = self.getRecord(baseRecord.indirection)
+            prevRecordColData = prevUpdateRecord.columns  # saved for abort
 
-            updatedValues = self.getUpdatedRow(prevUpdateRecord.columns, values)
+            updatedValues = self.getUpdatedRow(prevRecordColData, values)
 
         if prevUpdateRecord is not None:
             self.index.updateIndexes(baseRecord.RID, prevUpdateRecord.columns, updatedValues)
@@ -171,6 +173,9 @@ class Table:
         basePagePhysicalPages[INDIRECTION_COLUMN].replaceRecord(locPhyPageIndex, tailRecordRID)
         basePagePhysicalPages[SCHEMA_ENCODING_COLUMN].replaceRecord(locPhyPageIndex, 1)
         self.page_directory.bufferPool.releasePin(self.table_name, locPRIndex)
+
+        # saved for abort
+        return prevRecordColData
 
 
 
