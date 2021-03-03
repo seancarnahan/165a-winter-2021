@@ -2,7 +2,13 @@ import threading
 
 class ReadWriteLock:
     """ A lock object that allows many simultaneous "read locks", but
-    only one "write lock." """
+    only one "write lock." 
+    
+    Credit: Sami Hangaslammi
+
+    https://www.oreilly.com/library/view/python-cookbook/0596001673/ch06s04.html
+    
+    """
 
     def __init__(self):
         self._read_ready = threading.Condition(threading.Lock())
