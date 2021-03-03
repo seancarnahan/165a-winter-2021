@@ -2,7 +2,6 @@ import threading
 import time
 
 
-
 class MergeThread(threading.Thread):
     """
     Threading example class edited from:
@@ -43,10 +42,7 @@ class MergeThread(threading.Thread):
         self.exit_request.clear()
 
         while not self.exit_request.isSet():
-
-            print('\nInitiating a merge...')
             merge_data = self.db.bufferPool.getPageRangeForMerge()  # get the info to start a merge
-
             if merge_data is not True:  # PR to merge
                 # have PR to merge, start merge
                 self.db.merge(table_name=merge_data[0], page_range_index=merge_data[1])
