@@ -34,6 +34,10 @@ class Table:
 
         """
 
+        status = lock_manager.get_record_lock_status(RID, type=READ)
+        if (not status):
+            return False
+
         recordType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
 
         # load page range into buffer pool
@@ -87,6 +91,10 @@ class Table:
 
         """
 
+        status = lock_manager.get_record_lock_status(RID, type=INSERT)
+        if (not status):
+            return False
+
         # RID = self.getNewRID() -> get RID when you put the record in the DB
         indirection = 0
         timeStamp = self.getNewTimeStamp()
@@ -112,7 +120,9 @@ class Table:
         type -> INSERT, READ, WRITE
 
         """
-
+        status = lock_manager.get_record_lock_status(RID, type=WRITE)
+        if (not status):
+            return False
 
         # Step 1: get the updated Values
         baseRecord = self.getRecord(RID)
