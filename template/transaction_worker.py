@@ -2,7 +2,6 @@ from template.table import Table, Record
 from template.index import Index
 
 class TransactionWorker:
-
     """
     # Creates a transaction worker object.
     """
@@ -10,7 +9,6 @@ class TransactionWorker:
         self.stats = []
         self.transactions = transactions
         self.result = 0
-        pass
 
     """
     Appends t to transactions

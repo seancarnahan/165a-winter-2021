@@ -22,9 +22,18 @@ class Table:
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
 
+    #SUM SELECT
     # Input: RID
     # Output: Record Object with RID added
     def getRecord(self, RID):
+        """
+        status = lock_manager.get_record_lock_status(RID:optional, type=WRITE)
+        if (not status):
+            return False
+        type -> INSERT, READ, WRITE
+
+        """
+
         recordType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
 
         # load page range into buffer pool
@@ -66,9 +75,17 @@ class Table:
 
         return record
 
-    # INSERT -> only created new BASE Records
+    # INSERT
+    # insert -> only created new BASE Records
     # input: values: values of columns to be inserted; excluding the metadata
     def createNewRecord(self, key, columns):
+        """
+        status = lock_manager.get_record_lock_status(RID:optional, type=INSERT)
+        if (not status):
+            return False
+        type -> INSERT, READ, WRITE
+
+        """
 
         # RID = self.getNewRID() -> get RID when you put the record in the DB
         indirection = 0
@@ -83,9 +100,21 @@ class Table:
 
         self.index.insert(record.RID, columns)
 
+    #DELETE UPDATE
     # input: values: values of columns to be inserted; excluding the metadata
     # input: RID: the RID of the base Record you would like to provide an update for
     def updateRecord(self, key, RID, values, deleteFlag=False):
+        """
+        status = lock_manager.get_record_lock_status(RID:optional, type=READ)
+        lock_record
+        if (not status):
+            return False
+        type -> INSERT, READ, WRITE
+
+        """
+
+
+
         # Step 1: get the updated Values
         baseRecord = self.getRecord(RID)
         prevUpdateRecord = None
