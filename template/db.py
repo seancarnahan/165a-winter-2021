@@ -22,6 +22,7 @@ class Database:
     def __init__(self):
         self.tables = []
         self.bufferPool = BufferPool()
+        self.lockManager = LockManager()
         self.merge_thread = MergeThread(self, 5)  # sleep for 5 seconds
 
     def open(self, path):
