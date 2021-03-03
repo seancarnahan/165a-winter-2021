@@ -1,4 +1,5 @@
 from template.config import *
+from template.query_result import QueryResult
 
 
 class Query:
@@ -15,39 +16,62 @@ class Query:
     """
     # internal Method
     # Read a record with specified RID
-    # Returns True upon successful deletion
-    # Return False if record doesn't exist or is locked due to 2PL
+    # Return Query Result upon successful upon successful deletion
+        # is_successful = True
+        # key = key
+        # column_data = (*columns): List
+    # Return Query Result upon Failed deletion or if record doesn't exist or is locked due to 2PL
+        # is_successful = False
+        # key = key
+        # column_data = "none"
     When a record is deleted, the base record will be
     invalidated by setting the RID of itself and all its tail records to a special value
     """
     def delete(self, key):
+        query_result = QueryResult()
+        query_result.set_key(key)
+
         # RID is for the base record
         # schema encoding = 2 for delete
         try:
             rid = self.table.index.locate(self.table.key, key)
         except IndexError:
-            return False
+            return query_result
 
         values = []
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
-            self.table.updateRecord(key, rid[0], values, deleteFlag=True)
-            return True
+            prevRecordColData = self.table.updateRecord(key, rid[0], values, deleteFlag=True)
+
+            query_result.set_column_data(prevRecordColData)
+            query_result.set_is_successful(True)
+            return query_result
         except:
-            return False
+            return query_result
 
     """
     # Insert a record with specified columns
-    # Return True upon succesful insertion
-    # Returns False if insert fails for whatever reason
+    # Return Query Result upon successful insertion
+        # is_successful = True
+        # key = columns[0]
+        # column_data = "none"
+    # Return Query Result upon Failed insertion  for whatever reason
+        # is_successful = False
+        # key = columns[0]
+        # column_data = "none"
     """
     def insert(self, *columns):
+        query_result = QueryResult()
+        query_result.set_key(columns[0])
+
         try:
             self.table.createNewRecord(columns[0], columns)
-            return True
+
+            query_result.set_is_successful(True)
+            return query_result
         except Exception as e:
-            return False
+            return query_result
 
     """
     # Read a record with specified key
@@ -69,25 +93,37 @@ class Query:
                     if bit == 0:
                         record.columns[counter - 1] = None
                 recordList.append(record)
+
             return recordList
         except Exception as e:
             return False
 
-
     """
     # Update a record with specified key and columns
-    # Returns True if update is succesful
-    # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
+    # Return Query Result upon successful Update
+        # is_successful = True
+        # key = key
+        # column_data = (*columns): List
+    # Return Query Result upon Failed Update or if no records exist with given key or if the target record cannot be accessed due to 2PL locking
+        # is_successful = False
+        # key = key
+        # column_data = "none"
     """
     def update(self, key, *columns):
+        query_result = QueryResult()
+        query_result.set_key(key)
+
         # rid is the rid of base record
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
-                self.table.updateRecord(self.table.key, rid, columns)
-            return True
+                prevRecordColData = self.table.updateRecord(self.table.key, rid, columns)
+
+            query_result.set_column_data(prevRecordColData)
+            query_result.set_is_successful(True)
+            return query_result
         except:
-            return False
+            return query_result
 
     """
     :param start_range: int         # Start of the key range to aggregate
@@ -100,7 +136,6 @@ class Query:
     def sum(self, start_range, end_range, aggregate_column_index):
         ridRange = self.table.index.locate_range(start_range, end_range,
                                                  self.table.key)
-
         if ridRange == []:
             return False
         sum = 0
@@ -108,8 +143,8 @@ class Query:
             record = self.table.getLatestupdatedRecord(rid)
             value = record.columns[aggregate_column_index]
             sum += value
-        return sum
 
+        return sum
 
     """
     incremenets one column of the record
@@ -120,10 +155,14 @@ class Query:
     # Returns False if no record matches key or if target record is locked by 2PL.
     """
     def increment(self, key, column):
+        query_result = QueryResult()
+        query_result.set_key("none")
+
         r = self.select(key, self.table.key, [1] * self.table.num_all_columns)[0]
         if r is not False:
             updated_columns = [None] * self.table.num_all_columns
             updated_columns[column] = r[column] + 1
             u = self.update(key, *updated_columns)
+
             return u
         return False
