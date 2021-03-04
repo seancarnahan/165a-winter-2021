@@ -17,9 +17,21 @@ class PhysicalPages:
         #set last item of recordLocation
         locPhyPageIndex = self.numOfRecords
         recordLocation.append(locPhyPageIndex)
+        # lockManager.aquire(lockRID)
+        # check if lock was aquired
+        # if true: continue on normally
+        # if false: increment the locPhyPageIndex retry
+        # repeat until its able to aquire the lock for the new RID (loop)
+        #
+
+        """
+        check the capacities when it will get closer to 999 for inserts, write
+        """
 
         #create New RID with record Location
         RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
+
+        # TODO: lock it out
 
         record.RID = RID
         # make check so tail record does not set self to base_RID

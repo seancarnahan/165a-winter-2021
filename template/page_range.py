@@ -11,7 +11,6 @@ class PageRange:
         self.currTailPageIndex = 0
         self.id = page_range_index
         self.tableName = table_name
-        self.TPS = 0
 
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]

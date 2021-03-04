@@ -1,7 +1,6 @@
 from template.config import *
 from template.query_result import QueryResult
 
-
 class Query:
     """
     # Creates a Query object that can perform different queries on the specified table
@@ -12,6 +11,7 @@ class Query:
 
     def __init__(self, table):
         self.table = table
+
 
     """
     # internal Method
@@ -37,6 +37,11 @@ class Query:
             rid = self.table.index.locate(self.table.key, key)
         except IndexError:
             return query_result
+
+        # LOCKING, if not in use lock it out
+        status = self.lock_manager.get_record_lock_status(rid, type="WRITE")
+        if (not status):
+            return False
 
         values = []
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
@@ -83,6 +88,13 @@ class Query:
     """
     def select(self, key, column, query_columns):
         rids = self.table.index.locate(column, key)
+
+        # LOCKING
+        for rid in rids:
+            status = self.table.lock_manager.get_record_lock_status(rid, type="READ")
+            if (not status):
+                return False
+
         recordList = []
         try:
             for rid in rids:
@@ -136,6 +148,12 @@ class Query:
     def sum(self, start_range, end_range, aggregate_column_index):
         ridRange = self.table.index.locate_range(start_range, end_range,
                                                  self.table.key)
+        # LOCKING
+        for rid in ridRange:
+            status = self.table.lock_manager.get_record_lock_status(rid, type="READ")
+            if (not status):
+                return False
+
         if ridRange == []:
             return False
         sum = 0
