@@ -1,7 +1,4 @@
-from template.table import Table
-from template.record import Record
-from template.query_result import QueryResult
-from template.index import Index
+
 
 class Transaction:
 

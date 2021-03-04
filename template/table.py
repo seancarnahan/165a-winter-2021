@@ -3,7 +3,9 @@ from template.page_directory import PageDirectory
 from template.record import Record
 from template.config import *
 
+
 from time import time
+from template.lock_manager import LockManager
 
 
 class Table:
@@ -21,23 +23,12 @@ class Table:
         self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
+        self.lock_manager = LockManager()
 
     #SUM SELECT
     # Input: RID
     # Output: Record Object with RID added
     def getRecord(self, RID):
-        """
-        status = lock_manager.get_record_lock_status(RID:optional, type=WRITE)
-        if (not status):
-            return False
-        type -> INSERT, READ, WRITE
-
-        """
-
-        status = lock_manager.get_record_lock_status(RID, type=READ)
-        if (not status):
-            return False
-
         recordType, locPRIndex, loc_PIndex, locPhyPageIndex = self.page_directory.getRecordLocation(RID)
 
         # load page range into buffer pool
@@ -83,17 +74,6 @@ class Table:
     # insert -> only created new BASE Records
     # input: values: values of columns to be inserted; excluding the metadata
     def createNewRecord(self, key, columns):
-        """
-        status = lock_manager.get_record_lock_status(RID:optional, type=INSERT)
-        if (not status):
-            return False
-        type -> INSERT, READ, WRITE
-
-        """
-
-        status = lock_manager.get_record_lock_status(RID, type=INSERT)
-        if (not status):
-            return False
 
         # RID = self.getNewRID() -> get RID when you put the record in the DB
         indirection = 0
@@ -112,17 +92,6 @@ class Table:
     # input: values: values of columns to be inserted; excluding the metadata
     # input: RID: the RID of the base Record you would like to provide an update for
     def updateRecord(self, key, RID, values, deleteFlag=False):
-        """
-        status = lock_manager.get_record_lock_status(RID:optional, type=READ)
-        lock_record
-        if (not status):
-            return False
-        type -> INSERT, READ, WRITE
-
-        """
-        status = lock_manager.get_record_lock_status(RID, type=WRITE)
-        if (not status):
-            return False
 
         # Step 1: get the updated Values
         baseRecord = self.getRecord(RID)
