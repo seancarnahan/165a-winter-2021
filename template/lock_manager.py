@@ -1,31 +1,35 @@
+from collections import defaultdict
+from ReadWriteLock import ReadWriteLock
 
 class LockManager():
     """
-    # Initialize lock manager
-    #locks:
-        0 -> unlocked
-        1 -> exclusive lock
-        2 -> shared lock
-        (0-numOFThreads) = Key -> B
-        (0-2) = lockStatus -> A
-        AB
-    #responsible for maintaining state of locks on each record
+    Responsible for maintaining state of locks on each record
     """
     def __init__(self):
-        locked_records = {RID: LOCK}
+        self.record_locks = defaultdict(ReadWriteLock)
+
+    def acquireReadLock(self, rid: int) -> bool:
+        """ Acquire a reading lock. Returns True if successful, False otherwise. """
+        lock = self.record_locks[rid]
+        lock.acquire_read()
+        return True
+
+    def releaseReadLock(self, rid: int) -> bool:
+        """ Release a reading lock. Returns True if successful, False otherwise. """
+        lock = self.record_locks[rid]
+        lock.release_read()
+        return True
+
+    def acquireWriteLock(self, rid: int) -> bool:
+        """ Acquire a writing lock. Returns True if successful, False otherwise. """
+        lock = self.record_locks[rid]
+        lock.acquire_write()
+        return True
+
+    def releaseWriteLock(self, rid: int) -> bool:
+        """ Release a writing lock. Returns True if successful, False otherwise. """
         pass
 
-    """
-    #return TRUE, if there able to perform the query, false otherwise
-    
-    """
-    def get_record_lock_status(self, RID, queryType):
-        # type -> INSERT, READ, WRITE
+    def releaseLocks(self, rids: list) -> bool:
+        """ Release locks associate with rids. """
         pass
-
-    def lock_record(self, rid):
-        pass
-
-    def unlock_records(self, records):
-        pass
-
