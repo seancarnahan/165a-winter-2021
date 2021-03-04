@@ -34,21 +34,11 @@ class PhysicalPages:
             # if lock is not acquired move onto next record location
             if not didAcquireLock:
                 # increment locPhyPageIndex
-                recordLocation[3] += 1 # locPhyPageIndex
+                recordLocation[3] += 1  # locPhyPageIndex
 
                 # need to make a new base page or tail page
                 if recordLocation[3] >= PAGE_SIZE:  # TODO: This might be an issue, double check i got this right
                     return False
-
-        """
-        TODO: 
-        1. make sure setPageRecord does not run into any run time collisions
-            - issue: if multiple records get added past the fluctuation point
-                of the Page, then each of them will create their own Base Page
-        2. pass lock manger down to the physical page level
-        3. enable the read locks
-        4. release locks
-        """
 
         record.RID = RID
         # make check so tail record does not set self to base_RID
@@ -67,6 +57,8 @@ class PhysicalPages:
             self.physicalPages[col].write(columnData)
 
         self.numOfRecords += 1
+
+        #TODO: release write lock at RID
 
         return RID
 
