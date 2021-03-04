@@ -1,37 +1,54 @@
 from template.config import *
 from template.page import Page
+from template.lock_manager import LockManager
 
 
 #has a physical page for every column in the table
 class PhysicalPages:
-    def __init__(self, num_columns):
+    #TODO: pass down lock Manager
+    def __init__(self, num_columns, lockManager: LockManager):
         self.physicalPages = []
         self.numOfRecords = 0
+        self.lockManager = lockManager
+        self.maxNumOfBasePages = 2
 
         for _ in range(num_columns+RECORD_COLUMN_OFFSET):
             self.physicalPages.append(Page())
 
     # record location = [recordType, locPRIndex, locBPIndex or locTPIndex]
-    #returns the RID of the newly created Record
+    # returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation):
-        #set last item of recordLocation
+        # set Physical page location of recordLocation
         locPhyPageIndex = self.numOfRecords
         recordLocation.append(locPhyPageIndex)
-        # lockManager.aquire(lockRID)
-        # check if lock was aquired
-        # if true: continue on normally
-        # if false: increment the locPhyPageIndex retry
-        # repeat until its able to aquire the lock for the new RID (loop)
-        #
+
+        # keep attempting to find and lock an RID until successful
+        didAcquireLock = False
+        while not didAcquireLock:
+            # create New RID with record Location
+            RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
+
+            # attempt to acquire write lock
+            didAcquireLock = self.lockManager.acquireWriteLock(RID)
+
+            # if lock is not acquired move onto next record location
+            if not didAcquireLock:
+                # increment locPhyPageIndex
+                recordLocation[3] += 1 # locPhyPageIndex
+
+                # need to make a new base page or tail page
+                if recordLocation[3] >= PAGE_SIZE:  # TODO: This might be an issue, double check i got this right
+                    return False
 
         """
-        check the capacities when it will get closer to 999 for inserts, write
+        TODO: 
+        1. make sure setPageRecord does not run into any run time collisions
+            - issue: if multiple records get added past the fluctuation point
+                of the Page, then each of them will create their own Base Page
+        2. pass lock manger down to the physical page level
+        3. enable the read locks
+        4. release locks
         """
-
-        #create New RID with record Location
-        RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
-
-        # TODO: lock it out
 
         record.RID = RID
         # make check so tail record does not set self to base_RID

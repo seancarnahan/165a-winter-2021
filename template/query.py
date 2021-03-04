@@ -38,11 +38,6 @@ class Query:
         except IndexError:
             return query_result
 
-        # LOCKING, if not in use lock it out
-        status = self.lock_manager.get_record_lock_status(rid, type="WRITE")
-        if (not status):
-            return False
-
         values = []
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)

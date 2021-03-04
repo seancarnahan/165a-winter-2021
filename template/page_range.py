@@ -21,15 +21,21 @@ class PageRange:
     # record location = [recordType, locPRIndex]
     def insertBaseRecord(self, record, recordLocation):
         currBasePage = self.basePages[self.currBasePageIndex]
-
         locBPIndex = self.currBasePageIndex
+        addNewBasePage = False
 
         if currBasePage.hasCapacity():
             recordLocation.append(locBPIndex)
 
-            currBasePage.setPageRecord(record, recordLocation)
+            #if fails to add the record, then create a new base page
+            if currBasePage.setPageRecord(record, recordLocation) == False:
+                addNewBasePage = True
+
             return True #succesfully inserted a new record into Page Rage
         else:
+            addNewBasePage = True
+
+        if addNewBasePage == True:
             #check to if the Page Range can handle another base Page
             if self.addNewBasePage():
                 #update location
@@ -38,7 +44,10 @@ class PageRange:
 
                 #write to the pages
                 currBasePage = self.basePages[self.currBasePageIndex]
-                currBasePage.setPageRecord(record, recordLocation)
+
+                # if fails to add the record throw error because this should be fresh
+                if currBasePage.setPageRecord(record, recordLocation) == False:
+                    print("ISSUE could not add a record to a fresh base page")
                 return True #succesfully inserted a new record into Page Rage
             else:
                 #there is no more room in Page Range, need to tell PageDir to make a new one
@@ -48,15 +57,22 @@ class PageRange:
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, record, recordLocation):
         currTailPage = self.tailPages[self.currTailPageIndex]
-
         locTPIndex = self.currTailPageIndex
+        addNewTailPage = False
 
         if currTailPage.hasCapacity():
             recordLocation.append(locTPIndex)
 
-            #write to the pages
-            return currTailPage.setPageRecord(record, recordLocation)
+            #if fails to add the record, then create a new tail page
+            RID = currTailPage.setPageRecord(record, recordLocation)
+            if RID == False:
+                addNewTailPage = True
+            else:
+                return RID
         else:
+            addNewTailPage = True
+
+        if addNewTailPage == True:
             #create new TailPage()
             self.addNewTailPage()
             currTailPage = self.tailPages[self.currTailPageIndex]
@@ -65,8 +81,12 @@ class PageRange:
             locTPIndex = self.currTailPageIndex
             recordLocation.append(locTPIndex)
 
-            #write to the pages
-            return currTailPage.setPageRecord(record, recordLocation)
+            # if fails to add the record throw error because this should be fresh
+            RID = currTailPage.setPageRecord(record, recordLocation)
+            if RID == False:
+                print("ISSUE could not add a record to a fresh tail page")
+
+            return RID  # successfully inserted a new TAIL record into Page Rage
 
     def addNewBasePage(self):
         if self.hasCapacity():
