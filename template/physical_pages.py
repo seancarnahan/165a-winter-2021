@@ -5,7 +5,6 @@ from template.lock_manager import LockManager
 
 #has a physical page for every column in the table
 class PhysicalPages:
-    #TODO: pass down lock Manager
     def __init__(self, num_columns, lockManager: LockManager):
         self.physicalPages = []
         self.numOfRecords = 0

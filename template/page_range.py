@@ -13,6 +13,9 @@ class PageRange:
         self.id = page_range_index
         self.lock_manager = lock_manager
 
+        self.takenBasePages = [0]
+        self.takenTailPages = [0]
+
 
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns, self.lock_manager)]
@@ -24,41 +27,45 @@ class PageRange:
     def insertBaseRecord(self, record, recordLocation):
         currBasePage = self.basePages[self.currBasePageIndex]
         locBPIndex = self.currBasePageIndex
-        addNewBasePage = False
+        nextBasePage = False
 
         if currBasePage.hasCapacity():
             recordLocation.append(locBPIndex)
 
             # if fails to add the record, then create a new base page
             if currBasePage.setPageRecord(record, recordLocation) == False:
-                addNewBasePage = True
-
-            return True # successfully inserted a new record into Page Rage
-        else:
-            addNewBasePage = True
-
-        if addNewBasePage == True:
-            #def acquirePageRangeLock(self, page_range_index: int) -> bool:
-            #aquires the lock and appends the page
-            #if: the base page that were trying to add is locked then wait
-            #release
-
-            # check to if the Page Range can handle another base Page
-            if self.addNewBasePage(recordLocation):
-                # update location
-                locBPIndex = self.currBasePageIndex + 1
-                recordLocation.append(locBPIndex)
-
-                #write to the pages
-                currBasePage = self.basePages[locBPIndex]
-
-                # if fails to add the record throw error because this should be fresh
-                if currBasePage.setPageRecord(record, recordLocation) == False:
-                    print("ISSUE could not add a record to a fresh base page")
-                return True  # successfully inserted a new record into Page Rage
+                nextBasePage = True
             else:
-                # there is no more room in Page Range, need to tell PageDir to make a new one
-                return False  # FAILED to insert a record into page Range
+                return True  # successfully inserted a new record into Page Rage
+        else:
+            nextBasePage = True
+
+        if nextBasePage:
+            # set new record location
+            locBPIndex += 1
+            recordLocation.append(locBPIndex)
+
+            # new Page Range needs to be created
+            if locBPIndex > 1:
+                return False
+
+            # If locked, then wait
+            while self.lock_manager.acquirePageRangeLock(recordLocation[1]):
+                continue
+
+            if locBPIndex in self.takenBasePages:
+                # necessary base page is already created
+                pass
+            else:
+                #create a new base page
+                self.addNewBasePage(locBPIndex)
+
+            currBasePage = self.basePages[locBPIndex]
+
+            # if fails to add the record throw error because this should be fresh
+            if currBasePage.setPageRecord(record, recordLocation) == False:
+                print("ISSUE could not add a record to a fresh base page")
+
 
     # record location = [recordType, locPRIndex]
     # returns the RID of the newly created Tail Record
@@ -81,7 +88,7 @@ class PageRange:
 
         if addNewTailPage == True:
             # update location
-            locTPIndex = self.currTailPageIndex + 1
+            locTPIndex = self.currTailPageIndex
             recordLocation.append(locTPIndex)
 
             # create new TailPage()
@@ -96,15 +103,11 @@ class PageRange:
 
             return RID  # successfully inserted a new TAIL record into Page Rage
 
-    def addNewBasePage(self, recordLocation):
+    def addNewBasePage(self, locBPIndex):
         if self.hasCapacity():
-            pr_index = recordLocation[1]
-            didAcquirePRLock = self.lock_manager.acquirePageRangeLock(self, pr_index)
-
-            #TODO: could be an issue here: if each overflow sequentially aquires the lock, depends how delayed the threads are
-            if didAcquirePRLock:
-                self.currBasePageIndex += 1
-                self.basePages.append(PhysicalPages(self.num_columns, self.lock_manager))
+            self.takenBasePages.append(locBPIndex)
+            self.currBasePageIndex += 1
+            self.basePages.append(PhysicalPages(self.num_columns, self.lock_manager))
 
             return True
         else:
