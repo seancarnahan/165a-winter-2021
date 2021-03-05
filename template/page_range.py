@@ -2,29 +2,26 @@ from template.physical_pages import PhysicalPages
 from template.config import *
 from template.lock_manager import LockManager
 
-
 class PageRange:
 
-    def __init__(self, num_columns, table_name, page_range_index, lock_manager: LockManager):
+    def __init__(self, num_columns, table_name, page_range_index):
         self.num_columns = num_columns
         self.maxNumOfBasePages = self.getPageRangeCapacity()
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0
         self.id = page_range_index
-        self.lock_manager = lock_manager
 
         self.takenBasePages = [0]
         self.takenTailPages = [0]
 
-
         #list of type BasePage
-        self.basePages = [PhysicalPages(self.num_columns, self.lock_manager)]
+        self.basePages = [PhysicalPages(self.num_columns)]
 
         #list of type TailPage, when one tail page runs out add a new on to the list
-        self.tailPages = [PhysicalPages(self.num_columns, self.lock_manager)]
+        self.tailPages = [PhysicalPages(self.num_columns)]
 
     # record location = [recordType, locPRIndex]
-    def insertBaseRecord(self, record, recordLocation):
+    def insertBaseRecord(self, record, recordLocation, lock_manager: LockManager):
         currBasePage = self.basePages[self.currBasePageIndex]
         locBPIndex = self.currBasePageIndex
         nextBasePage = False
@@ -33,7 +30,7 @@ class PageRange:
             recordLocation.append(locBPIndex)
 
             # if fails to add the record, then create a new base page
-            if currBasePage.setPageRecord(record, recordLocation) == False:
+            if currBasePage.setPageRecord(record, recordLocation, lock_manager) == False:
                 nextBasePage = True
             else:
                 return True  # successfully inserted a new record into Page Rage
@@ -66,12 +63,12 @@ class PageRange:
             currBasePage = self.basePages[locBPIndex]
 
             # if fails to add the record throw error because this should be fresh
-            if currBasePage.setPageRecord(record, recordLocation) == False:
+            if currBasePage.setPageRecord(record, recordLocation, lock_manager) == False:
                 print("ISSUE could not add a record to a fresh base page")
 
     # record location = [recordType, locPRIndex]
     # returns the RID of the newly created Tail Record
-    def insertTailRecord(self, record, recordLocation):
+    def insertTailRecord(self, record, recordLocation, lock_manager: LockManager):
         currTailPage = self.tailPages[self.currTailPageIndex]
         locTPIndex = self.currTailPageIndex
         nextTailPage = False
@@ -80,7 +77,7 @@ class PageRange:
             recordLocation.append(locTPIndex)
 
             # if fails to add the record, then create a new tail page
-            RID = currTailPage.setPageRecord(record, recordLocation)
+            RID = currTailPage.setPageRecord(record, recordLocation, lock_manager)
             if RID == False:
                 nextTailPage = True
             else:
@@ -109,7 +106,7 @@ class PageRange:
             currTailPage = self.tailPages[locTPIndex]
 
             # set page record
-            RID = currTailPage.setPageRecord(record, recordLocation)
+            RID = currTailPage.setPageRecord(record, recordLocation, lock_manager)
             if RID == False:
                 print("ISSUE could not add a record to a fresh tail page")
 

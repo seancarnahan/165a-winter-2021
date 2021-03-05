@@ -5,10 +5,9 @@ from template.lock_manager import LockManager
 
 #has a physical page for every column in the table
 class PhysicalPages:
-    def __init__(self, num_columns, lockManager: LockManager):
+    def __init__(self, num_columns):
         self.physicalPages = []
         self.numOfRecords = 0
-        self.lockManager = lockManager
         self.maxNumOfBasePages = 2
 
         for _ in range(num_columns+RECORD_COLUMN_OFFSET):
@@ -16,7 +15,7 @@ class PhysicalPages:
 
     # record location = [recordType, locPRIndex, locBPIndex or locTPIndex]
     # returns the RID of the newly created Record
-    def setPageRecord(self, record, recordLocation):
+    def setPageRecord(self, record, recordLocation, lock_manager: LockManager):
         # set Physical page location of recordLocation
         locPhyPageIndex = self.numOfRecords
         recordLocation.append(locPhyPageIndex)
@@ -28,7 +27,7 @@ class PhysicalPages:
             RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
 
             # attempt to acquire write lock
-            didAcquireLock = self.lockManager.acquireWriteLock(RID)
+            didAcquireLock = lock_manager.acquireWriteLock(RID)
 
             # if lock is not acquired move onto next record location
             if not didAcquireLock:

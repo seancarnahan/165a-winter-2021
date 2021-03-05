@@ -2,10 +2,9 @@ from template.index import Index
 from template.page_directory import PageDirectory
 from template.record import Record
 from template.config import *
-
+from template.lock_manager import LockManager
 
 from time import time
-from template.lock_manager import LockManager
 
 
 class Table:
@@ -16,14 +15,15 @@ class Table:
     """
 
     def __init__(self, table_name, num_columns, key, bufferPool):
+        self.lock_manager = LockManager()
         self.table_name = table_name
         self.key = key
         self.num_columns = num_columns
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
+        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name, self.lock_manager)
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
-        self.lock_manager = LockManager()
+
 
     #SUM SELECT
     # Input: RID
@@ -84,7 +84,7 @@ class Table:
         record = Record(key, indirection, timeStamp, encoding, columns)
 
         # insert a new record -> all the checks for capacity are done implicitly
-        self.page_directory.insertBaseRecord(record)
+        self.page_directory.insertBaseRecord(record, self.lock_manager)
 
         self.index.insert(record.RID, columns)
 

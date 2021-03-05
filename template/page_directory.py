@@ -1,10 +1,13 @@
+from template.lock_manager import LockManager
+
 class PageDirectory:
 
     #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
-    def __init__(self, num_columns, bufferPool, table_name):
+    def __init__(self, num_columns, bufferPool, table_name, lock_manager: LockManager):
         self.num_columns = num_columns
         self.bufferPool = bufferPool
         self.table_name = table_name
+        self.lock_manager = lock_manager
 
     #the page range has been updated, update the dirty bit tracker
     def update_page_range_dirty_bit_tracker(self, page_range_index):
@@ -30,7 +33,7 @@ class PageDirectory:
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #attempt to add record PageRange
-        if currPageRange.insertBaseRecord(record, recordLocation):
+        if currPageRange.insertBaseRecord(record, recordLocation, self.lock_manager):
             #unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
 
@@ -56,7 +59,7 @@ class PageDirectory:
             currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
             #Recursive -> attempt to add record to PageRange
-            currPageRange.insertBaseRecord(record, recordLocation)
+            currPageRange.insertBaseRecord(record, recordLocation, self.lock_manager)
 
             #unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
@@ -89,7 +92,7 @@ class PageDirectory:
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #try to add record to PageRange
-        ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation)
+        ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation, self.lock_manager)
 
         tailRecordsSinceLastMergeIndex = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name, locPRIndex)
         self.bufferPool.tailRecordsSinceLastMerge[tailRecordsSinceLastMergeIndex][2] += 1
