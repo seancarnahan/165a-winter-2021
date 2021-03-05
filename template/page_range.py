@@ -58,7 +58,10 @@ class PageRange:
                 pass
             else:
                 #create a new base page
+                #TODO: when this returns False, avoiding race condition for created page range
                 self.addNewBasePage(locBPIndex)
+
+            #TODO: release write lock on page range
 
             currBasePage = self.basePages[locBPIndex]
 
@@ -66,13 +69,12 @@ class PageRange:
             if currBasePage.setPageRecord(record, recordLocation) == False:
                 print("ISSUE could not add a record to a fresh base page")
 
-
     # record location = [recordType, locPRIndex]
     # returns the RID of the newly created Tail Record
     def insertTailRecord(self, record, recordLocation):
         currTailPage = self.tailPages[self.currTailPageIndex]
         locTPIndex = self.currTailPageIndex
-        addNewTailPage = False
+        nextTailPage = False
 
         if currTailPage.hasCapacity():
             recordLocation.append(locTPIndex)
@@ -80,23 +82,33 @@ class PageRange:
             # if fails to add the record, then create a new tail page
             RID = currTailPage.setPageRecord(record, recordLocation)
             if RID == False:
-                addNewTailPage = True
+                nextTailPage = True
             else:
                 return RID
         else:
-            addNewTailPage = True
+            nextTailPage = True
 
-        if addNewTailPage == True:
+        if nextTailPage:
             # update location
             locTPIndex = self.currTailPageIndex
             recordLocation.append(locTPIndex)
 
-            # create new TailPage()
-            self.addNewTailPage(recordLocation)
+            # If locked, then wait
+            while self.lock_manager.acquirePageRangeLock(recordLocation[1]):
+                continue
+
+            if locTPIndex in self.takenTailPages:
+                # necessary tail page is already created
+                pass
+            else:
+                #create a new tail page
+                self.addNewTailPage(locTPIndex)
+
+            #TODO release write page range lock
+
             currTailPage = self.tailPages[locTPIndex]
 
-
-            # if fails to add the record throw error because this should be fresh
+            # set page record
             RID = currTailPage.setPageRecord(record, recordLocation)
             if RID == False:
                 print("ISSUE could not add a record to a fresh tail page")
@@ -114,7 +126,8 @@ class PageRange:
             return False
 
 
-    def addNewTailPage(self, recordLocation):
+    def addNewTailPage(self, locTPIndex):
+        self.takenBasePages.append(locTPIndex)
         self.currTailPageIndex += 1
         self.tailPages.append(PhysicalPages(self.num_columns, self.lock_manager))
 
