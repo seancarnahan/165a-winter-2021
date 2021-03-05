@@ -9,6 +9,11 @@ class PhysicalPages:
         self.physicalPages = []
         self.numOfRecords = 0
         self.maxNumOfBasePages = 2
+        self.availableRIDs = []
+
+        # TODO verify this works
+        for n in range(PAGE_SIZE - 1, 0, -1):
+            self.availableRIDs.append(n)
 
         for _ in range(num_columns+RECORD_COLUMN_OFFSET):
             self.physicalPages.append(Page())
@@ -16,28 +21,13 @@ class PhysicalPages:
     # record location = [recordType, locPRIndex, locBPIndex or locTPIndex]
     # returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation, lock_manager: LockManager):
-        # set Physical page location of recordLocation
-        locPhyPageIndex = self.numOfRecords
-        recordLocation.append(locPhyPageIndex)
-        RID = None
+        try:
+            locPhyPageIndex = self.availableRIDs.pop()
+            recordLocation.append(locPhyPageIndex)
+        except IndexError:
+            return False  # page is full
 
-        # keep attempting to find and lock an RID until successful
-        didAcquireLock = False
-        while not didAcquireLock:
-            # create New RID with record Location
-            RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
-
-            # attempt to acquire write lock
-            didAcquireLock = lock_manager.acquireWriteLock(RID)
-
-            # if lock is not acquired move onto next record location
-            if not didAcquireLock:
-                # increment locPhyPageIndex
-                recordLocation[3] += 1  # locPhyPageIndex
-
-                # need to make a new base page or tail page
-                if recordLocation[3] >= PAGE_SIZE:  # TODO: This might be an issue, double check i got this right
-                    return False
+        RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
 
         record.RID = RID
         # make check so tail record does not set self to base_RID
