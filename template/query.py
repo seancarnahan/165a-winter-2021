@@ -43,7 +43,11 @@ class Query:
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
+            self.table.lock_manager.acquireWriteLock(rid[0])
+
             prevRecordColData = self.table.updateRecord(key, rid[0], values, deleteFlag=True)
+
+            self.table.lock_manager.releaseWriteLock(rid[0])
 
             query_result.set_column_data(prevRecordColData)
             query_result.set_is_successful(True)
@@ -133,7 +137,12 @@ class Query:
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
+
+                self.table.lock_manager.acquireWriteLock(rid)
+
                 prevRecordColData = self.table.updateRecord(self.table.key, rid, columns)
+
+                self.table.lock_manager.releaseWriteLock(rid)
 
             query_result.set_column_data(prevRecordColData)
             query_result.set_is_successful(True)

@@ -12,7 +12,7 @@ class PhysicalPages:
         self.availableRIDs = []
 
         # TODO verify this works
-        for n in range(PAGE_SIZE - 1, 0, -1):
+        for n in range(PAGE_SIZE):
             self.availableRIDs.append(n)
 
         for _ in range(num_columns+RECORD_COLUMN_OFFSET):
@@ -22,7 +22,7 @@ class PhysicalPages:
     # returns the RID of the newly created Record
     def setPageRecord(self, record, recordLocation, lock_manager: LockManager):
         try:
-            locPhyPageIndex = self.availableRIDs.pop()
+            locPhyPageIndex = self.availableRIDs.pop(0)
             recordLocation.append(locPhyPageIndex)
         except IndexError:
             return False  # page is full
