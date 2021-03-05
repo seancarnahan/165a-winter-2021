@@ -176,6 +176,7 @@ class Query:
     :param column: the column to increment
     # Returns True is increment is successful
     # Returns False if no record matches key or if target record is locked by 2PL.
+    # Locking by increment should be handled by the select and update functions
     """
     def increment(self, key, column):
         query_result = QueryResult()

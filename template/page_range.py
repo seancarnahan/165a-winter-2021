@@ -55,10 +55,11 @@ class PageRange:
                 pass
             else:
                 #create a new base page
-                #TODO: when this returns False, avoiding race condition for created page range
-                self.addNewBasePage(locBPIndex)
+                #TODO: when this returns False, avoiding race condition for created page range left off 3/4/21
+                if not self.addNewBasePage(locBPIndex):
+                    return False
 
-            #TODO: release write lock on page range
+            lock_manager.releasePageRangeLock(recordLocation[1])
 
             currBasePage = self.basePages[locBPIndex]
 
@@ -87,7 +88,7 @@ class PageRange:
 
         if nextTailPage:
             # update location
-            locTPIndex = self.currTailPageIndex
+            locTPIndex += 1
             recordLocation.append(locTPIndex)
 
             # If locked, then wait
@@ -101,7 +102,7 @@ class PageRange:
                 #create a new tail page
                 self.addNewTailPage(locTPIndex)
 
-            #TODO release write page range lock
+            lock_manager.releasePageRangeLock(recordLocation[1])
 
             currTailPage = self.tailPages[locTPIndex]
 

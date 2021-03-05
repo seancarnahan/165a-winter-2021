@@ -19,6 +19,7 @@ class PhysicalPages:
         # set Physical page location of recordLocation
         locPhyPageIndex = self.numOfRecords
         recordLocation.append(locPhyPageIndex)
+        RID = None
 
         # keep attempting to find and lock an RID until successful
         didAcquireLock = False
@@ -56,7 +57,8 @@ class PhysicalPages:
 
         self.numOfRecords += 1
 
-        #TODO: release write lock at RID
+        # release write lock
+        lock_manager.releaseWriteLock(RID)
 
         return RID
 

@@ -11,6 +11,9 @@ class LockManager():
     def acquirePageRangeLock(self, page_range_index: int) -> bool:
         pass
 
+    def releasePageRangeLock(self, page_range_index: int) -> bool:
+        pass
+
     def acquireReadLock(self, rid: int) -> bool:
         """ Acquire a reading lock. Returns True if successful, False otherwise. """
         lock = self.record_locks[rid]
