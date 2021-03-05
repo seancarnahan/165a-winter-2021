@@ -38,7 +38,7 @@ class Database:
             f.readline()  # read the headers, we won't need them.
             for table_entry in f:
                 table_name, num_columns, key_column, _ = table_entry.split(",")
-                self.tables.append(Table(table_name, int(num_columns), int(key_column), self.bufferPool))
+                self.tables.append(Table(self, table_name, int(num_columns), int(key_column), self.bufferPool))
 
     def close(self):
         self.merge_thread.stop_thread()  # prompts the thread to finish and terminate
@@ -59,7 +59,7 @@ class Database:
 
         self.bufferPool.currPageRangeIndexes[name] = -1
         self.bufferPool.numOfColumns[name] = num_columns
-        table = Table(name, num_columns, key, self.bufferPool)
+        table = Table(self, name, num_columns, key, self.bufferPool)
         self.tables.append(table)
 
         return table
@@ -91,16 +91,6 @@ class Database:
 
     def fetchPage(self):
         pass
-
-    def merge_placeholder(self):
-        """
-        Placeholder for the thread to test on
-
-        Delete when db.merge() is ready
-        """
-
-        for table in self.tables:
-            print("merging on tables: " + table.table_name)
 
     def merge(self, table_name: str, page_range_index: int):
         """

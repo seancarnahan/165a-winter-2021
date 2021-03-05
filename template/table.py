@@ -1,3 +1,4 @@
+from template.db import Database
 from template.index import Index
 from template.page_directory import PageDirectory
 from template.record import Record
@@ -15,7 +16,8 @@ class Table:
     :param key: int             #Index of table key in columns
     """
 
-    def __init__(self, table_name, num_columns, key, bufferPool):
+    def __init__(self, parent: Database, table_name, num_columns, key, bufferPool):
+        self.parent_db = parent
         self.table_name = table_name
         self.key = key
         self.num_columns = num_columns
