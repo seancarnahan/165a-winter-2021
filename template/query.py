@@ -24,8 +24,9 @@ class Query:
         # is_successful = False
         # key = key
         # column_data = "none"
-    When a record is deleted, the base record will be
-    invalidated by setting the RID of itself and all its tail records to a special value
+    # When a record is deleted, the base record will be
+    # invalidated by setting the RID of itself and all its tail records to a special value
+    # LOCK occurs inside the table on the record and PageRange
     """
     def delete(self, key):
         query_result = QueryResult()
@@ -60,6 +61,7 @@ class Query:
         # is_successful = False
         # key = columns[0]
         # column_data = "none"
+    # LOCK occurs inside the table on the record and PageRange
     """
     def insert(self, *columns):
         query_result = QueryResult()
@@ -80,20 +82,26 @@ class Query:
     # Returns a list of Record objects upon success
     # Returns False if record locked by TPL
     # Assume that select will never be called on a key that doesn't exist
+    # LOCK occurs on the record from Query class
     """
     def select(self, key, column, query_columns):
         rids = self.table.index.locate(column, key)
 
-        # LOCKING
+        # LOCKING RIDS that we are reading
         for rid in rids:
-            status = self.table.lock_manager.get_record_lock_status(rid, type="READ")
-            if (not status):
+            status = self.table.lock_manager.acquireReadLock(rid)
+            if not status:
                 return False
 
         recordList = []
         try:
             for rid in rids:
+                # get the record
                 record = self.table.getLatestupdatedRecord(rid)
+
+                # release the locked record
+                self.table.lock_manager.releaseReadLock(rid)
+
                 counter = 0
                 for bit in query_columns:
                     counter += 1
@@ -115,6 +123,7 @@ class Query:
         # is_successful = False
         # key = key
         # column_data = "none"
+    # LOCK occurs inside the table on the record and PageRange
     """
     def update(self, key, *columns):
         query_result = QueryResult()
@@ -139,14 +148,14 @@ class Query:
     # this function is only called on the primary key.
     # Returns the summation of the given range upon success
     # Returns False if no record exists in the given range
+    # LOCK occurs on the record from Query class
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         ridRange = self.table.index.locate_range(start_range, end_range,
                                                  self.table.key)
-        # LOCKING
         for rid in ridRange:
-            status = self.table.lock_manager.get_record_lock_status(rid, type="READ")
-            if (not status):
+            status = self.table.lock_manager.acquireReadLock(rid)
+            if not status:
                 return False
 
         if ridRange == []:
@@ -154,6 +163,7 @@ class Query:
         sum = 0
         for rid in ridRange:
             record = self.table.getLatestupdatedRecord(rid)
+            self.table.lock_manager.releaseReadLock(rid)
             value = record.columns[aggregate_column_index]
             sum += value
 

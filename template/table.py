@@ -20,7 +20,7 @@ class Table:
         self.key = key
         self.num_columns = num_columns
         self.num_all_columns = num_columns + RECORD_COLUMN_OFFSET
-        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name, self.lock_manager)
+        self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
 
@@ -133,7 +133,7 @@ class Table:
         record.base_RID = base_rid
 
         # step 3: add the record and get the RID
-        tailRecordRID = self.page_directory.insertTailRecord(RID, record)
+        tailRecordRID = self.page_directory.insertTailRecord(RID, record, self.lock_manager)
 
         # step 4: if there is a prevTail, then set the prev tail record to point to the new tail record
         if baseRecord.indirection != 0:
