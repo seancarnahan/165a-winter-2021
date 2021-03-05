@@ -1,10 +1,12 @@
 from collections import defaultdict
-from ReadWriteLock import ReadWriteLock
+from template.ReadWriteLock import ReadWriteLock
 
-class LockManager():
+
+class LockManager:
     """
     Responsible for maintaining state of locks on each record
     """
+
     def __init__(self):
         self.record_locks = defaultdict(ReadWriteLock)
 
