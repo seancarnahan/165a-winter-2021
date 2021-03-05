@@ -45,8 +45,17 @@ class PageDirectory:
             #if it fails unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
 
-            #Page Range is full: ask buffer Pool to initialize a new Page Range
-            self.bufferPool.addNewPageRangeToDisk(self.table_name)
+            # acquireTableLock(self, page_range_index: int)
+            while not lock_manager.acquireTableLock():
+                continue
+
+            # check if PR has already been created
+            if self.bufferPool.currPageRangeIndexes[self.table_name] <= locPRIndex:
+                # Page Range is full: ask buffer Pool to initialize a new Page Range
+                self.bufferPool.addNewPageRangeToDisk(self.table_name)
+
+            # release lock for the table
+            lock_manager.releaseTableLock()
 
             #get the new Page Range Index
             locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)

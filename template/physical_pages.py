@@ -47,9 +47,6 @@ class PhysicalPages:
 
         self.numOfRecords += 1
 
-        # release write lock
-        lock_manager.releaseWriteLock(RID)
-
         return RID
 
     def getPageRecord(self, record_index):
