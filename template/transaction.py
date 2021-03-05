@@ -1,3 +1,6 @@
+import copy
+
+from template.query import Query
 
 
 class Transaction:
@@ -8,6 +11,8 @@ class Transaction:
     def __init__(self):
         self.queries = []
         self.rollback_queries = []
+        self.db_buffer_pool = None
+        self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
         # locked_records = [RIDs]
         pass
 
@@ -28,6 +33,11 @@ class Transaction:
     """
     def run(self):
         for query, args in self.queries:
+            # get pre-transaction page ranges in buffer pool before querying
+            query_obj = self.parse_query_method(query)
+            self.db_buffer_pool = query_obj.table.parent_db.bufferPool
+            self.bp_tailRecordsSinceLastMerge = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
+
             query_type = str(query).split()[2].split(".")[1]
             result = query(*args)
             is_successful = None
@@ -137,17 +147,49 @@ class Transaction:
     # returns the query object instance from the bound method
     # "helper method" 
     """
-    def parse_query_method(self, bound_method):
+    def parse_query_method(self, bound_method) -> Query:
         return bound_method.__self__
 
-    def commit(self):
-        # TODO: commit to database
+    def affected_page_ranges(self, changed_tRSLM):  # changed_tailRecordsSinceLastMerge
         """
-        #transaction completes ->
+        :param changed_tRSLM: list - list of lists containing [table_name, pr_index, count]
+        :return: dict of { 'table_name': [pr_index1, pr_index2] }
+        """
+        dict_of_PRs_to_commit = {}  # dict of { 'table_name': [pr_index1, pr_index2] }
+
+        for pr_list in changed_tRSLM:
+            # create a new key with table_name
+            if pr_list[0] not in dict_of_PRs_to_commit.keys():
+                dict_of_PRs_to_commit[pr_list[0]] = []
+
+            for old_pr_list in self.bp_tailRecordsSinceLastMerge:
+                # iterate through all lists and find matching table_name, pr_index
+                # we need to commit that pr if changes have been made to it
+                if pr_list[0] == old_pr_list[0] and pr_list[1] == old_pr_list[1] and pr_list[2] != old_pr_list[2]:
+                    dict_of_PRs_to_commit[pr_list[0]].append(pr_list[1])  # append the PR_index
+
+        return dict_of_PRs_to_commit
+
+    def commit(self):
+        """
+        transaction completes ->
             write to disk manually, reset dirty bit to 0
             for all the page ranges we wrote to disk
             then release all the locks
 
-        lock_manager.unlcok_records( # locked_records = [RIDs])
+        lock_manager.unlock_records( # locked_records = [RIDs])
+        :return: True, if commit is successful
         """
+        changed_tRSLM = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
+        list_of_PRs_to_commit = self.affected_page_ranges(changed_tRSLM=changed_tRSLM)
+
+        for query_method in self.queries:
+            # get the object the query method is bound to
+            query_obj = self.parse_query_method(query_method)
+
+            db_bp = query_obj.table.parent_db.bufferPool
+            db_bp.write_to_disk()
+
+            query_obj.table.lock_manager.releaseLocks()
+
         return True
