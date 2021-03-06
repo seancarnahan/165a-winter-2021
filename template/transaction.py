@@ -1,5 +1,6 @@
 import copy
 
+from template.db import Database
 from template.query import Query
 
 
@@ -11,6 +12,7 @@ class Transaction:
     def __init__(self):
         self.queries = []
         self.rollback_queries = []
+        self.db = None
         self.db_buffer_pool = None
         self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
         # locked_records = [RIDs]
@@ -35,7 +37,8 @@ class Transaction:
         for query, args in self.queries:
             # get pre-transaction page ranges in buffer pool before querying
             query_obj = self.parse_query_method(query)
-            self.db_buffer_pool = query_obj.table.parent_db.bufferPool
+            self.db = query_obj.table.parent_db
+            self.db_buffer_pool = self.db.bufferPool
             self.bp_tailRecordsSinceLastMerge = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
 
             query_type = str(query).split()[2].split(".")[1]
@@ -181,15 +184,14 @@ class Transaction:
         :return: True, if commit is successful
         """
         changed_tRSLM = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
-        list_of_PRs_to_commit = self.affected_page_ranges(changed_tRSLM=changed_tRSLM)
+        dict_of_PRs_to_commit = self.affected_page_ranges(changed_tRSLM=changed_tRSLM)
 
-        for query_method in self.queries:
-            # get the object the query method is bound to
-            query_obj = self.parse_query_method(query_method)
+        for table_name in dict_of_PRs_to_commit.keys():
+            for pr_index in dict_of_PRs_to_commit[table_name]:
+                # get the PageRange object from buffer_pool
+                pr_obj = self.db_buffer_pool.get_page_range_from_buffer_pool(table_name, pr_index)
+                self.db_buffer_pool.write_to_disk(pr_obj)
 
-            db_bp = query_obj.table.parent_db.bufferPool
-            db_bp.write_to_disk()
-
-            query_obj.table.lock_manager.releaseLocks()
+            self.db.get_table(table_name).lock_manager.releaseLocks()
 
         return True
