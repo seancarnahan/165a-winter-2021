@@ -12,6 +12,7 @@ class TransactionWorker:
         self.result = 0
 
         self.thread = threading.Thread(target=self.run, args=())
+        self.thread.daemon = True  # Daemonize thread
 
     """
     Appends t to transactions
