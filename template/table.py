@@ -2,10 +2,9 @@ from template.index import Index
 from template.page_directory import PageDirectory
 from template.record import Record
 from template.config import *
-
+from template.lock_manager import LockManager
 
 from time import time
-from template.lock_manager import LockManager
 
 
 class Table:
@@ -16,6 +15,7 @@ class Table:
     """
 
     def __init__(self, table_name, num_columns, key, bufferPool):
+        self.lock_manager = LockManager()
         self.table_name = table_name
         self.key = key
         self.num_columns = num_columns
@@ -23,7 +23,7 @@ class Table:
         self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
-        self.lock_manager = LockManager()
+
 
     #SUM SELECT
     # Input: RID
@@ -84,7 +84,7 @@ class Table:
         record = Record(key, indirection, timeStamp, encoding, columns)
 
         # insert a new record -> all the checks for capacity are done implicitly
-        self.page_directory.insertBaseRecord(record)
+        self.page_directory.insertBaseRecord(record, self.lock_manager)
 
         self.index.insert(record.RID, columns)
 
@@ -133,7 +133,7 @@ class Table:
         record.base_RID = base_rid
 
         # step 3: add the record and get the RID
-        tailRecordRID = self.page_directory.insertTailRecord(RID, record)
+        tailRecordRID = self.page_directory.insertTailRecord(RID, record, self.lock_manager)
 
         # step 4: if there is a prevTail, then set the prev tail record to point to the new tail record
         if baseRecord.indirection != 0:

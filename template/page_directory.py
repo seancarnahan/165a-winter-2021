@@ -1,3 +1,5 @@
+from template.lock_manager import LockManager
+
 class PageDirectory:
 
     #index (0 = within 5000 records, 1 = 5001 - 10000 records) based on config.PAGE_RANGE_LEN
@@ -13,7 +15,7 @@ class PageDirectory:
         self.bufferPool.dirtyBitTracker[pr_buffer_pool_index] = True
 
     #returns True when its a success
-    def insertBaseRecord(self, record):
+    def insertBaseRecord(self, record, lock_manager: LockManager):
         #record type is basePage
         recordType = 1
 
@@ -30,7 +32,7 @@ class PageDirectory:
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #attempt to add record PageRange
-        if currPageRange.insertBaseRecord(record, recordLocation):
+        if currPageRange.insertBaseRecord(record, recordLocation, lock_manager):
             #unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
 
@@ -43,8 +45,17 @@ class PageDirectory:
             #if it fails unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
 
-            #Page Range is full: ask buffer Pool to initialize a new Page Range
-            self.bufferPool.addNewPageRangeToDisk(self.table_name)
+            # acquireTableLock(self, page_range_index: int)
+            while not lock_manager.acquireTableLock():
+                continue
+
+            # check if PR has already been created
+            if self.bufferPool.currPageRangeIndexes[self.table_name] <= locPRIndex:
+                # Page Range is full: ask buffer Pool to initialize a new Page Range
+                self.bufferPool.addNewPageRangeToDisk(self.table_name)
+
+            # release lock for the table
+            lock_manager.releaseTableLock()
 
             #get the new Page Range Index
             locPRIndex = self.bufferPool.getCurrPageRangeIndex(self.table_name)
@@ -56,7 +67,7 @@ class PageDirectory:
             currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
             #Recursive -> attempt to add record to PageRange
-            currPageRange.insertBaseRecord(record, recordLocation)
+            currPageRange.insertBaseRecord(record, recordLocation, lock_manager)
 
             #unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
@@ -68,7 +79,7 @@ class PageDirectory:
 
 
     # returns the RID of the newly created Tail Record
-    def insertTailRecord(self, baseRID, record):
+    def insertTailRecord(self, baseRID, record, lock_manager: LockManager):
 
         #List of elements that make up the RID
         baseRIDLoc = self.getRecordLocation(baseRID)
@@ -89,7 +100,7 @@ class PageDirectory:
         currPageRange = self.bufferPool.loadPageRange(self.table_name, locPRIndex)
 
         #try to add record to PageRange
-        ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation)
+        ridOfTailRecord = currPageRange.insertTailRecord(record, recordLocation, lock_manager)
 
         tailRecordsSinceLastMergeIndex = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name, locPRIndex)
         self.bufferPool.tailRecordsSinceLastMerge[tailRecordsSinceLastMergeIndex][2] += 1

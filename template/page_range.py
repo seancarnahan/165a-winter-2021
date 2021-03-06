@@ -1,6 +1,6 @@
 from template.physical_pages import PhysicalPages
 from template.config import *
-
+from template.lock_manager import LockManager
 
 class PageRange:
 
@@ -10,7 +10,9 @@ class PageRange:
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0
         self.id = page_range_index
-        self.tableName = table_name
+
+        self.takenBasePages = [0]
+        self.takenTailPages = [0]
 
         #list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]
@@ -19,67 +21,112 @@ class PageRange:
         self.tailPages = [PhysicalPages(self.num_columns)]
 
     # record location = [recordType, locPRIndex]
-    def insertBaseRecord(self, record, recordLocation):
+    def insertBaseRecord(self, record, recordLocation, lock_manager: LockManager):
         currBasePage = self.basePages[self.currBasePageIndex]
-
         locBPIndex = self.currBasePageIndex
+        nextBasePage = False
 
         if currBasePage.hasCapacity():
             recordLocation.append(locBPIndex)
 
-            currBasePage.setPageRecord(record, recordLocation)
-            return True #succesfully inserted a new record into Page Rage
-        else:
-            #check to if the Page Range can handle another base Page
-            if self.addNewBasePage():
-                #update location
-                locBPIndex = self.currBasePageIndex
-                recordLocation.append(locBPIndex)
-
-                #write to the pages
-                currBasePage = self.basePages[self.currBasePageIndex]
-                currBasePage.setPageRecord(record, recordLocation)
-                return True #succesfully inserted a new record into Page Rage
+            # if fails to add the record, then create a new base page
+            if currBasePage.setPageRecord(record, recordLocation, lock_manager) == False:
+                nextBasePage = True
             else:
-                #there is no more room in Page Range, need to tell PageDir to make a new one
-                return False #FAILED to insert a record into page Range
+                return True  # successfully inserted a new record into Page Rage
+        else:
+            nextBasePage = True
+
+        if nextBasePage:
+            # set new record location
+            locBPIndex += 1
+            recordLocation.append(locBPIndex)
+
+            # new Page Range needs to be created
+            if locBPIndex > 1:
+                return False
+
+            # If locked, then wait
+            while lock_manager.acquirePageRangeLock(recordLocation[1]):
+                continue
+
+            if locBPIndex in self.takenBasePages:
+                # necessary base page is already created
+                pass
+            else:
+                #create a new base page
+                if not self.addNewBasePage(locBPIndex):
+                    return False  # create a new page range
+
+            lock_manager.releasePageRangeLock(recordLocation[1])
+
+            currBasePage = self.basePages[locBPIndex]
+
+            # if fails to add the record throw error because this should be fresh
+            if currBasePage.setPageRecord(record, recordLocation, lock_manager) == False:
+                print("ISSUE could not add a record to a fresh base page")
 
     # record location = [recordType, locPRIndex]
     # returns the RID of the newly created Tail Record
-    def insertTailRecord(self, record, recordLocation):
+    def insertTailRecord(self, record, recordLocation, lock_manager: LockManager):
         currTailPage = self.tailPages[self.currTailPageIndex]
-
         locTPIndex = self.currTailPageIndex
+        nextTailPage = False
 
         if currTailPage.hasCapacity():
             recordLocation.append(locTPIndex)
 
-            #write to the pages
-            return currTailPage.setPageRecord(record, recordLocation)
+            # if fails to add the record, then create a new tail page
+            RID = currTailPage.setPageRecord(record, recordLocation, lock_manager)
+            if RID == False:
+                nextTailPage = True
+            else:
+                return RID
         else:
-            #create new TailPage()
-            self.addNewTailPage()
-            currTailPage = self.tailPages[self.currTailPageIndex]
+            nextTailPage = True
 
-            #update location
-            locTPIndex = self.currTailPageIndex
+        if nextTailPage:
+            # update location
+            locTPIndex += 1
             recordLocation.append(locTPIndex)
 
-            #write to the pages
-            return currTailPage.setPageRecord(record, recordLocation)
+            # If locked, then wait
+            while lock_manager.acquirePageRangeLock(recordLocation[1]):
+                continue
 
-    def addNewBasePage(self):
+            if locTPIndex in self.takenTailPages:
+                # necessary tail page is already created
+                pass
+            else:
+                #create a new tail page
+                self.addNewTailPage(locTPIndex)
+
+            lock_manager.releasePageRangeLock(recordLocation[1])
+
+            currTailPage = self.tailPages[locTPIndex]
+
+            # set page record
+            RID = currTailPage.setPageRecord(record, recordLocation, lock_manager)
+            if RID == False:
+                print("ISSUE could not add a record to a fresh tail page")
+
+            return RID  # successfully inserted a new TAIL record into Page Rage
+
+    def addNewBasePage(self, locBPIndex):
         if self.hasCapacity():
+            self.takenBasePages.append(locBPIndex)
             self.currBasePageIndex += 1
-            self.basePages.append(PhysicalPages(self.num_columns))
+            self.basePages.append(PhysicalPages(self.num_columns, self.lock_manager))
+
             return True
         else:
             return False
 
 
-    def addNewTailPage(self):
+    def addNewTailPage(self, locTPIndex):
+        self.takenBasePages.append(locTPIndex)
         self.currTailPageIndex += 1
-        self.tailPages.append(PhysicalPages(self.num_columns))
+        self.tailPages.append(PhysicalPages(self.num_columns, self.lock_manager))
 
     #figure out how many many base pages can fit into PAGE RANGE without exceeding MAX_PAGE_RANGE_SIZE
     #return number of Base Pages

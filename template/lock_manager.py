@@ -8,6 +8,18 @@ class LockManager():
     def __init__(self):
         self.record_locks = defaultdict(ReadWriteLock)
 
+    def acquireTableLock(self) -> bool:
+        return True
+
+    def acquireTableLock(self) -> bool:
+        return True
+
+    def acquirePageRangeLock(self, page_range_index: int) -> bool:
+        return True
+
+    def releasePageRangeLock(self, page_range_index: int) -> bool:
+        return True
+
     def acquireReadLock(self, rid: int) -> bool:
         """ Acquire a reading lock. Returns True if successful, False otherwise. """
         lock = self.record_locks[rid]
@@ -20,6 +32,7 @@ class LockManager():
         lock.release_read()
         return True
 
+    """NOT sure if we need the below methods"""
     def acquireWriteLock(self, rid: int) -> bool:
         """ Acquire a writing lock. Returns True if successful, False otherwise. """
         lock = self.record_locks[rid]
