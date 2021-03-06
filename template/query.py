@@ -1,5 +1,7 @@
 from template.config import *
 from template.query_result import QueryResult
+from template.table import Table
+
 
 class Query:
     """
@@ -9,7 +11,7 @@ class Query:
     Any query that crashes (due to exceptions) should return False
     """
 
-    def __init__(self, table):
+    def __init__(self, table: Table):
         self.table = table
 
 

@@ -14,8 +14,8 @@ class Table:
     :param key: int             #Index of table key in columns
     """
 
-    def __init__(self, table_name, num_columns, key, bufferPool):
-        self.lock_manager = LockManager()
+    def __init__(self, parent, table_name, num_columns, key, bufferPool):
+        self.parent_db = parent
         self.table_name = table_name
         self.key = key
         self.num_columns = num_columns
@@ -23,7 +23,7 @@ class Table:
         self.page_directory = PageDirectory(self.num_all_columns, bufferPool, table_name)
         self.index = Index(self)
         self.index.create_index(key + RECORD_COLUMN_OFFSET)
-
+        self.lock_manager = LockManager()
 
     #SUM SELECT
     # Input: RID
