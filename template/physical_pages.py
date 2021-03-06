@@ -1,5 +1,6 @@
 from template.config import *
 from template.page import Page
+from template.lock_manager import LockManager
 
 
 #has a physical page for every column in the table
@@ -7,31 +8,26 @@ class PhysicalPages:
     def __init__(self, num_columns):
         self.physicalPages = []
         self.numOfRecords = 0
+        self.maxNumOfBasePages = 2
+        self.availableRIDs = []
+
+        # TODO verify this works
+        for n in range(PAGE_SIZE):
+            self.availableRIDs.append(n)
 
         for _ in range(num_columns+RECORD_COLUMN_OFFSET):
             self.physicalPages.append(Page())
 
     # record location = [recordType, locPRIndex, locBPIndex or locTPIndex]
-    #returns the RID of the newly created Record
-    def setPageRecord(self, record, recordLocation):
-        #set last item of recordLocation
-        locPhyPageIndex = self.numOfRecords
-        recordLocation.append(locPhyPageIndex)
-        # lockManager.aquire(lockRID)
-        # check if lock was aquired
-        # if true: continue on normally
-        # if false: increment the locPhyPageIndex retry
-        # repeat until its able to aquire the lock for the new RID (loop)
-        #
+    # returns the RID of the newly created Record
+    def setPageRecord(self, record, recordLocation, lock_manager: LockManager):
+        try:
+            locPhyPageIndex = self.availableRIDs.pop(0)
+            recordLocation.append(locPhyPageIndex)
+        except IndexError:
+            return False  # page is full
 
-        """
-        check the capacities when it will get closer to 999 for inserts, write
-        """
-
-        #create New RID with record Location
         RID = record.getNewRID(recordLocation[0], recordLocation[1], recordLocation[2], recordLocation[3])
-
-        # TODO: lock it out
 
         record.RID = RID
         # make check so tail record does not set self to base_RID
