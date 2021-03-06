@@ -4,6 +4,7 @@ from shutil import rmtree # used to remove directories
 import copy
 import os
 import pickle
+import time
 
 
 class BufferPool:
@@ -190,7 +191,12 @@ class BufferPool:
     #TODO: make this async
     def requestPageRange(self, table_name, page_range_index):
         if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
-            self.remove_LFU_page() #TODO: await this method
+            """
+            # python is inherently synchronous by nature: However,
+            # if this function never finds a page range to remove this will
+            # loop on forever -> could potentially cause issues
+            """
+            self.remove_LFU_page()
 
         try:
             page_range = self.read_from_disk(table_name, page_range_index)
@@ -286,19 +292,20 @@ class BufferPool:
     def remove_LFU_page(self):
         # find least recently used pageRanges
         ordered_LFUs = self.order_LFUs()
+        started_looking = time.perf_counter()
+        isRemoved = False
 
-        for i in range(len(ordered_LFUs)):
-            if self.check_if_pr_not_in_use(ordered_LFUs[i]):
-                # remove page range
-                self.removePageRangeFromBufferPool(ordered_LFUs[i])
+        while not isRemoved:
+            current_time = time.perf_counter()
+            if abs(current_time - started_looking) > 5:
+                print("taking too long to find a page range to remove from BP")
 
-                break
-
-
-        # #keep looping until a page is removed
-        # while True:
-        #
-        # return True
+            for i in range(len(ordered_LFUs)):
+                if self.check_if_pr_not_in_use(ordered_LFUs[i]):
+                    # remove page range
+                    self.removePageRangeFromBufferPool(ordered_LFUs[i])
+                    isRemoved = True
+                    break
 
     """
     :param index: the index of the page range in buffer pool
