@@ -6,6 +6,7 @@ class PageRange:
 
     def __init__(self, num_columns, table_name, page_range_index):
         self.num_columns = num_columns
+        self.table_name = table_name
         self.maxNumOfBasePages = self.getPageRangeCapacity()
         self.currBasePageIndex = 0
         self.currTailPageIndex = 0

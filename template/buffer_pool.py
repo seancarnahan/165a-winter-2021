@@ -280,7 +280,7 @@ class BufferPool:
         returns true if its able to update; else: false
     """
     def write_to_disk(self, page_range: PageRange):
-        table_name = page_range.tableName
+        table_name = page_range.table_name
         path = self.get_path(self.db_path, table_name, page_range.id)
         fs = open(path, "wb")
         pickle.dump(page_range, fs)
