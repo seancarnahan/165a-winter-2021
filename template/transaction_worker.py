@@ -1,5 +1,6 @@
 from template.table import Table, Record
 from template.index import Index
+import threading
 
 class TransactionWorker:
     """
@@ -9,6 +10,8 @@ class TransactionWorker:
         self.stats = []
         self.transactions = transactions
         self.result = 0
+
+        self.thread = threading.Thread(target=self.run, args=())
 
     """
     Appends t to transactions
