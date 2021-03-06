@@ -15,8 +15,8 @@ class Transaction:
         self.db = None
         self.db_buffer_pool = None
         self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
-        # locked_records = [RIDs]
-        pass
+        self.acquiredReadLocks = []  # RIDs
+        self.acquiredWriteLocks = []  # RIDs
 
     """
     # Adds the given query to this transaction
