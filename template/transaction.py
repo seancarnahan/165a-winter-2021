@@ -43,19 +43,14 @@ class Transaction:
 
             query_type = str(query).split()[2].split(".")[1]
             result = query(*args)
-            is_successful = None
-            key = None
-            column_data = None
 
-            if query_type == "select" or query_type == "sum":
-                # result is either the selection or the sum, or False if failed
-                # does not create a rollback for sum or select
-                is_successful = result
-            else:
-                # result is now QueryResult Object
-                is_successful = result.is_successful
-                key = result.key
-                column_data = result.column_data
+            # result is now QueryResult Object
+            is_successful = result.is_successful
+            key = result.key
+            column_data = result.column_data
+            read_result = result.read_result
+            self.acquiredReadLocks.extend(result.read_locks)
+            self.acquiredWriteLocks.extend(result.write_locks)
 
             # If the query has failed the transaction should abort
             if not is_successful:

@@ -45,11 +45,13 @@ class Query:
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
-            self.table.lock_manager.acquireWriteLock(rid[0])
+            status = self.table.lock_manager.acquireWriteLock(rid[0])
+            if not status:
+                return query_result
+            else:
+                query_result.set_write_lock(rid[0])
 
             prevRecordColData = self.table.updateRecord(key, rid[0], values, deleteFlag=True)
-
-            self.table.lock_manager.releaseWriteLock(rid[0])
 
             query_result.set_column_data(prevRecordColData)
             query_result.set_is_successful(True)
@@ -91,22 +93,22 @@ class Query:
     # LOCK occurs on the record from Query class
     """
     def select(self, key, column, query_columns):
+        query_result = QueryResult()
         rids = self.table.index.locate(column, key)
 
         # LOCKING RIDS that we are reading
         for rid in rids:
             status = self.table.lock_manager.acquireReadLock(rid)
             if not status:
-                return False
+                return query_result
+            else:
+                query_result.set_read_lock(rid)
 
         recordList = []
         try:
             for rid in rids:
                 # get the record
                 record = self.table.getLatestupdatedRecord(rid)
-
-                # release the locked record
-                self.table.lock_manager.releaseReadLock(rid)
 
                 counter = 0
                 for bit in query_columns:
@@ -115,9 +117,13 @@ class Query:
                         record.columns[counter - 1] = None
                 recordList.append(record)
 
-            return recordList
+            query_result.set_key(key)
+            query_result.set_read_result(recordList)
+            query_result.set_is_successful(True)
+
+            return query_result
         except Exception as e:
-            return False
+            return query_result
 
     """
     # Update a record with specified key and columns
@@ -139,12 +145,13 @@ class Query:
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
-
-                self.table.lock_manager.acquireWriteLock(rid)
+                status = self.table.lock_manager.acquireWriteLock(rid)
+                if not status:
+                    return query_result
+                else:
+                    query_result.set_write_lock(rid)
 
                 prevRecordColData = self.table.updateRecord(self.table.key, rid, columns)
-
-                self.table.lock_manager.releaseWriteLock(rid)
 
             query_result.set_column_data(prevRecordColData)
             query_result.set_is_successful(True)
@@ -162,23 +169,27 @@ class Query:
     # LOCK occurs on the record from Query class
     """
     def sum(self, start_range, end_range, aggregate_column_index):
+        query_result = QueryResult()
         ridRange = self.table.index.locate_range(start_range, end_range,
                                                  self.table.key)
         for rid in ridRange:
             status = self.table.lock_manager.acquireReadLock(rid)
             if not status:
-                return False
+                return query_result
+            else:
+                query_result.set_read_lock(rid)
 
         if ridRange == []:
-            return False
+            return query_result
         sum = 0
         for rid in ridRange:
             record = self.table.getLatestupdatedRecord(rid)
-            self.table.lock_manager.releaseReadLock(rid)
             value = record.columns[aggregate_column_index]
             sum += value
 
-        return sum
+        query_result.set_is_successful(True)
+        query_result.set_read_result(sum)
+        return query_result
 
     """
     incremenets one column of the record
