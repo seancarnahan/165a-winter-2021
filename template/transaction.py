@@ -1,4 +1,5 @@
 import copy
+import numpy as np
 
 from template.db import Database
 from template.query import Query
@@ -177,6 +178,10 @@ class Transaction:
         """
         dict_of_PRs_to_commit = {}  # dict of { 'table_name': [pr_index1, pr_index2] }
 
+        # list of lists in changed_tRSLM not originally in bp_tailRecordsSinceLastMerge
+        new_prs = np.setdiff1d(changed_tRSLM, self.bp_tailRecordsSinceLastMerge)
+        new_prs.tolist()
+
         for pr_list in changed_tRSLM:
             # create a new key with table_name
             if pr_list[0] not in dict_of_PRs_to_commit.keys():
@@ -187,6 +192,13 @@ class Transaction:
                 # we need to commit that pr if changes have been made to it
                 if pr_list[0] == old_pr_list[0] and pr_list[1] == old_pr_list[1] and pr_list[2] != old_pr_list[2]:
                     dict_of_PRs_to_commit[pr_list[0]].append(pr_list[1])  # append the PR_index
+
+        if new_prs:
+            for pr_list in new_prs:
+                # create a new key with table_name
+                if pr_list[0] not in dict_of_PRs_to_commit.keys():
+                    dict_of_PRs_to_commit[pr_list[0]] = []
+                dict_of_PRs_to_commit[pr_list[0]].append(pr_list[1])  # append the PR_index
 
         return dict_of_PRs_to_commit
 
@@ -211,10 +223,9 @@ class Transaction:
                     pr_obj = self.db_buffer_pool.get_page_range_from_buffer_pool(table_name, pr_index)
                     self.db_buffer_pool.write_to_disk(pr_obj)
 
-            # release list of RIDs with read locks
-            # self.acquiredReadLocks
-            # release list of RIDs with write locks
-            # self.acquiredWriteLocks
-            # self.db.get_table(table_name).lock_manager.releaseLocks()
+            # release list of RIDs with read locks, release list of RIDs with write locks
+            self.db.get_table(table_name).lock_manager.releaseLocks(
+                self.acquiredReadLocks['table_name'],
+                self.acquiredWriteLocks['table_name'])
 
         return True
