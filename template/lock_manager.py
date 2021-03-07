@@ -1,5 +1,6 @@
 from collections import defaultdict
-from template.ReadWriteLock import ReadWriteLock
+from template.RWLock import RWLock
+from threading import Lock
 
 
 class LockManager:
@@ -8,43 +9,66 @@ class LockManager:
     """
 
     def __init__(self):
-        self.record_locks = defaultdict(ReadWriteLock)
+        self.managerLock = Lock()
+        self.record_locks = defaultdict(RWLock)
+        self.table_lock = Lock()
+        self.page_range_locks = defaultdict(Lock)
 
     def acquireTableLock(self) -> bool:
-        return True
+        return self.table_lock.acquire(blocking=False)
 
-    def acquireTableLock(self) -> bool:
-        return True
+    def releaseTableLock(self):
+        self.table_lock.release()
 
     def acquirePageRangeLock(self, page_range_index: int) -> bool:
-        return True
+        with self.managerLock:
+            lock = self.page_range_locks[page_range_index]
+        return lock.acquire(blocking=False)
 
     def releasePageRangeLock(self, page_range_index: int) -> bool:
+        with self.managerLock:
+            lock = self.page_range_locks[page_range_index]
+        lock.release()
         return True
 
     def acquireReadLock(self, rid: int) -> bool:
         """ Acquire a reading lock. Returns True if successful, False otherwise. """
-        lock = self.record_locks[rid]
-        lock.acquire_read()
-        return True
+        with self.managerLock:
+            lock = self.record_locks[rid]
+        return lock.acquire_read()
 
     def releaseReadLock(self, rid: int) -> bool:
         """ Release a reading lock. Returns True if successful, False otherwise. """
-        lock = self.record_locks[rid]
-        lock.release_read()
-        return True
+        with self.managerLock:
+            lock = self.record_locks[rid]
+        return lock.release_read()
+
 
     """NOT sure if we need the below methods"""
     def acquireWriteLock(self, rid: int) -> bool:
         """ Acquire a writing lock. Returns True if successful, False otherwise. """
-        lock = self.record_locks[rid]
-        lock.acquire_write()
-        return True
+        with self.managerLock:
+            lock = self.record_locks[rid]
+        return lock.acquire_write()
 
     def releaseWriteLock(self, rid: int) -> bool:
         """ Release a writing lock. Returns True if successful, False otherwise. """
-        pass
+        with self.managerLock:
+            lock = self.record_locks[rid]
+        return lock.release_write()
 
-    def releaseLocks(self, rids: list) -> bool:
+    def releaseLocks(self, readRids: list, writeRids: list) -> bool:
         """ Release locks associate with rids. """
-        pass
+        readLocks = []
+        writeLocks = []
+        with self.managerLock:
+            for rid in readRids:
+                readLocks.append(self.record_locks[rid])
+            for rid in writeRids:
+                writeLocks.append(self.record_locks[rid])
+
+        for lock in readLocks:
+            lock.release_read()
+
+        for lock in writeLocks:
+            lock.release_write()
