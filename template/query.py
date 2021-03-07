@@ -49,7 +49,7 @@ class Query:
             if not status:
                 return query_result
             else:
-                query_result.set_write_lock(rid[0])
+                query_result.set_write_lock(rid[0], self.table.table_name)
 
             prevRecordColData = self.table.updateRecord(key, rid[0], values, deleteFlag=True)
 
@@ -91,7 +91,16 @@ class Query:
     # Returns False if record locked by TPL
     # Assume that select will never be called on a key that doesn't exist
     # LOCK occurs on the record from Query class
+    """    """
+    # Read a record with specified key
+    # :param key: the key value to select records based on
+    # :param query_columns: what columns to return. array of 1 or 0 values.
+    # Returns a list of Record objects upon success
+    # Returns False if record locked by TPL
+    # Assume that select will never be called on a key that doesn't exist
+    # LOCK occurs on the record from Query class
     """
+
     def select(self, key, column, query_columns):
         query_result = QueryResult()
         rids = self.table.index.locate(column, key)
@@ -102,7 +111,7 @@ class Query:
             if not status:
                 return query_result
             else:
-                query_result.set_read_lock(rid)
+                query_result.set_read_lock(rid, self.table.table_name)
 
         recordList = []
         try:
@@ -149,7 +158,7 @@ class Query:
                 if not status:
                     return query_result
                 else:
-                    query_result.set_write_lock(rid)
+                    query_result.set_write_lock(rid, self.table.table_name)
 
                 prevRecordColData = self.table.updateRecord(self.table.key, rid, columns)
 
@@ -177,7 +186,7 @@ class Query:
             if not status:
                 return query_result
             else:
-                query_result.set_read_lock(rid)
+                query_result.set_read_lock(rid, self.table.table_name)
 
         if ridRange == []:
             return query_result

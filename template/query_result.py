@@ -8,8 +8,8 @@ class QueryResult:
         self.is_successful = False
         self.key = None
         self.column_data = None
-        self.read_locks = []
-        self.write_locks = []
+        self.read_locks = {}  # key: table_name ; values = [RIDs]
+        self.write_locks = {}  # key: table_name ; values = [RIDs]
         self.read_result = None  # only set for SELECTs and SUMs
 
     def set_is_successful(self, is_successful: bool):
@@ -21,11 +21,11 @@ class QueryResult:
     def set_column_data(self, column_data):
         self.column_data = column_data
 
-    def set_write_lock(self, rid):
-        self.write_locks.append(rid)
+    def set_write_lock(self, rid, table_name):
+        self.write_locks[table_name].append(rid)
 
-    def set_read_lock(self, rid):
-        self.read_locks.append(rid)
+    def set_read_lock(self, rid, table_name):
+        self.read_locks[table_name].append(rid)
 
     def set_read_result(self, read_result):
         self.read_result = read_result

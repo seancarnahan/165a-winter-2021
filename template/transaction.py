@@ -15,8 +15,8 @@ class Transaction:
         self.db = None
         self.db_buffer_pool = None
         self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
-        self.acquiredReadLocks = []  # RIDs
-        self.acquiredWriteLocks = []  # RIDs
+        self.acquiredReadLocks = {}  # key: table_name ; values = [RIDs]
+        self.acquiredWriteLocks = {}  # key: table_name ; values = [RIDs]
 
     """
     # Adds the given query to this transaction
@@ -50,8 +50,14 @@ class Transaction:
             key = result.key
             column_data = result.column_data
             read_result = result.read_result
-            self.acquiredReadLocks.extend(result.read_locks)
-            self.acquiredWriteLocks.extend(result.write_locks)
+
+            for table_name in result.read_locks.keys():
+                rid = result.read_locks[table_name]
+                self.acquiredReadLocks[table_name].extend(rid)
+
+            for table_name in result.write_locks.keys():
+                rid = result.write_locks[table_name]
+                self.acquiredWriteLocks[table_name].extend(rid)
 
             # If the query has failed the transaction should abort
             if not is_successful:
@@ -137,6 +143,18 @@ class Transaction:
             else:
                 # rollback update
                 rollback_query(key, query_obj, col_data)
+
+        # Release read locks
+        for table_name in self.acquiredReadLocks.keys():
+            table = self.db.get_table(table_name)
+            for rid in self.acquiredReadLocks[table_name]:
+                table.lock_manager.releaseReadLock(rid)
+
+        # Release write locks
+        for table_name in self.acquiredWriteLocks.keys():
+            table = self.db.get_table(table_name)
+            for rid in self.acquiredWriteLocks[table_name]:
+                table.lock_manager.releaseWriteLock(rid)
 
         return False
 
