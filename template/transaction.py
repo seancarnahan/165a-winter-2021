@@ -34,13 +34,14 @@ class Transaction:
     # should always returns True if commits and False if aborts
     """
     def run(self):
-        for query, args in self.queries:
+        if self.queries:
             # get pre-transaction page ranges in buffer pool before querying
-            query_obj = self.parse_query_method(query)
-            self.db = query_obj.table.parent_db
+            front_query_obj = self.parse_query_method(self.queries[0][0])
+            self.db = front_query_obj.table.parent_db
             self.db_buffer_pool = self.db.bufferPool
             self.bp_tailRecordsSinceLastMerge = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
 
+        for query, args in self.queries:
             query_type = str(query).split()[2].split(".")[1]
             result = query(*args)
 
@@ -150,6 +151,9 @@ class Transaction:
 
     def affected_page_ranges(self, changed_tRSLM):  # changed_tailRecordsSinceLastMerge
         """
+        Get a dict of the affected PageRanges in a table by comparing the original buffer pool data to the data after
+        the transaction finishes.
+
         :param changed_tRSLM: list - list of lists containing [table_name, pr_index, count]
         :return: dict of { 'table_name': [pr_index1, pr_index2] }
         """
@@ -182,11 +186,17 @@ class Transaction:
         dict_of_PRs_to_commit = self.affected_page_ranges(changed_tRSLM=changed_tRSLM)
 
         for table_name in dict_of_PRs_to_commit.keys():
-            for pr_index in dict_of_PRs_to_commit[table_name]:
-                # get the PageRange object from buffer_pool
-                pr_obj = self.db_buffer_pool.get_page_range_from_buffer_pool(table_name, pr_index)
-                self.db_buffer_pool.write_to_disk(pr_obj)
+            # only need to write to disk if there are any PageRanges to write
+            if dict_of_PRs_to_commit[table_name]:
+                for pr_index in dict_of_PRs_to_commit[table_name]:
+                    # get the PageRange object from buffer_pool
+                    pr_obj = self.db_buffer_pool.get_page_range_from_buffer_pool(table_name, pr_index)
+                    self.db_buffer_pool.write_to_disk(pr_obj)
 
-            self.db.get_table(table_name).lock_manager.releaseLocks()
+            # release list of RIDs with read locks
+            # self.acquiredReadLocks
+            # release list of RIDs with write locks
+            # self.acquiredWriteLocks
+            # self.db.get_table(table_name).lock_manager.releaseLocks()
 
         return True
