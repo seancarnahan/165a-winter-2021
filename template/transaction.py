@@ -1,8 +1,19 @@
 import copy
-import numpy as np
+# import numpy as np
 
 from template.db import Database
 from template.query import Query
+
+
+def list_diff(list1, list2):
+    """
+    Returns the difference between two lists.
+    Used for checking original buffer_pool bp_tailRecordsSinceLastMerge object and changed version post-transaction.
+
+    :param list1: list
+    :param list2: list
+    """
+    return list(list(set(list1) - set(list2)) + list(set(list2) - set(list1)))
 
 
 class Transaction:
@@ -179,8 +190,11 @@ class Transaction:
         dict_of_PRs_to_commit = {}  # dict of { 'table_name': [pr_index1, pr_index2] }
 
         # list of lists in changed_tRSLM not originally in bp_tailRecordsSinceLastMerge
-        new_prs = np.setdiff1d(changed_tRSLM, self.bp_tailRecordsSinceLastMerge)
-        new_prs.tolist()
+        # GeeksforGeeks diff solution
+        new_prs = list_diff(changed_tRSLM, self.bp_tailRecordsSinceLastMerge)
+        # numpy diff function solution
+        # new_prs = np.setdiff1d(changed_tRSLM, self.bp_tailRecordsSinceLastMerge)
+        # new_prs.tolist()
 
         for pr_list in changed_tRSLM:
             # create a new key with table_name
