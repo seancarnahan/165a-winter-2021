@@ -2,6 +2,7 @@ from template.physical_pages import PhysicalPages
 from template.config import *
 from template.lock_manager import LockManager
 
+
 class PageRange:
 
     def __init__(self, num_columns, table_name, page_range_index):
@@ -15,10 +16,10 @@ class PageRange:
         self.takenBasePages = [0]
         self.takenTailPages = [0]
 
-        #list of type BasePage
+        # list of type BasePage
         self.basePages = [PhysicalPages(self.num_columns)]
 
-        #list of type TailPage, when one tail page runs out add a new on to the list
+        # list of type TailPage, when one tail page runs out add a new on to the list
         self.tailPages = [PhysicalPages(self.num_columns)]
 
     # record location = [recordType, locPRIndex]
@@ -48,14 +49,14 @@ class PageRange:
                 return False
 
             # If locked, then wait
-            while lock_manager.acquirePageRangeLock(recordLocation[1]):
+            while not lock_manager.acquirePageRangeLock(recordLocation[1]):
                 continue
 
             if locBPIndex in self.takenBasePages:
                 # necessary base page is already created
                 pass
             else:
-                #create a new base page
+                # create a new base page
                 if not self.addNewBasePage(locBPIndex):
                     return False  # create a new page range
 
@@ -92,14 +93,14 @@ class PageRange:
             recordLocation.append(locTPIndex)
 
             # If locked, then wait
-            while lock_manager.acquirePageRangeLock(recordLocation[1]):
+            while not lock_manager.acquirePageRangeLock(recordLocation[1]):
                 continue
 
             if locTPIndex in self.takenTailPages:
                 # necessary tail page is already created
                 pass
             else:
-                #create a new tail page
+                # create a new tail page
                 self.addNewTailPage(locTPIndex)
 
             lock_manager.releasePageRangeLock(recordLocation[1])
@@ -117,30 +118,29 @@ class PageRange:
         if self.hasCapacity():
             self.takenBasePages.append(locBPIndex)
             self.currBasePageIndex += 1
-            self.basePages.append(PhysicalPages(self.num_columns, self.lock_manager))
+            self.basePages.append(PhysicalPages(self.num_columns))
 
             return True
         else:
             return False
 
-
     def addNewTailPage(self, locTPIndex):
         self.takenBasePages.append(locTPIndex)
         self.currTailPageIndex += 1
-        self.tailPages.append(PhysicalPages(self.num_columns, self.lock_manager))
+        self.tailPages.append(PhysicalPages(self.num_columns))
 
-    #figure out how many many base pages can fit into PAGE RANGE without exceeding MAX_PAGE_RANGE_SIZE
-    #return number of Base Pages
+    # figure out how many many base pages can fit into PAGE RANGE without exceeding MAX_PAGE_RANGE_SIZE
+    # return number of Base Pages
     def getPageRangeCapacity(self):
         maxBasePageSize = self.num_columns
 
-        while((maxBasePageSize + self.num_columns) <=  MAX_PAGE_RANGE_SIZE):
+        while ((maxBasePageSize + self.num_columns) <= MAX_PAGE_RANGE_SIZE):
             maxBasePageSize += self.num_columns
 
         # return maxBasePageSize / self.num_columns
         return 2
 
-    #True if Page Range has capacity for another Base Page, if not PageDir should create another PageRange
+    # True if Page Range has capacity for another Base Page, if not PageDir should create another PageRange
     def hasCapacity(self):
         if len(self.basePages) >= self.maxNumOfBasePages:
             return False

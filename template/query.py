@@ -165,7 +165,7 @@ class Query:
             query_result.set_column_data(prevRecordColData)
             query_result.set_is_successful(True)
             return query_result
-        except:
+        except Exception as e:
             return query_result
 
     """

@@ -1,7 +1,7 @@
 import copy
 # import numpy as np
 
-from template.db import Database
+from collections import defaultdict
 from template.query import Query
 
 
@@ -13,7 +13,9 @@ def list_diff(list1, list2):
     :param list1: list
     :param list2: list
     """
-    return list(list(set(list1) - set(list2)) + list(set(list2) - set(list1)))
+    tempList1 = set(tuple(x) for x in list1)
+    tempList2 = set(tuple(x) for x in list2)
+    return list(list(set(tempList1) - set(tempList2)) + list(set(tempList2) - set(tempList1)))
 
 
 class Transaction:
@@ -27,8 +29,8 @@ class Transaction:
         self.db = None
         self.db_buffer_pool = None
         self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
-        self.acquiredReadLocks = {}  # key: table_name ; values = [RIDs]
-        self.acquiredWriteLocks = {}  # key: table_name ; values = [RIDs]
+        self.acquiredReadLocks = defaultdict(list)  # key: table_name ; values = [RIDs]
+        self.acquiredWriteLocks = defaultdict(list)  # key: table_name ; values = [RIDs]
 
     """
     # Adds the given query to this transaction
@@ -239,7 +241,7 @@ class Transaction:
 
             # release list of RIDs with read locks, release list of RIDs with write locks
             self.db.get_table(table_name).lock_manager.releaseLocks(
-                self.acquiredReadLocks['table_name'],
-                self.acquiredWriteLocks['table_name'])
+                self.acquiredReadLocks[table_name],
+                self.acquiredWriteLocks[table_name])
 
         return True

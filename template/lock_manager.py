@@ -15,7 +15,7 @@ class LockManager:
         self.page_range_locks = defaultdict(Lock)
 
     def acquireTableLock(self) -> bool:
-        return self.table_lock.acquire(blocking=False)
+        return self.table_lock.acquire(blocking=False) or True
 
     def releaseTableLock(self):
         self.table_lock.release()
@@ -23,7 +23,7 @@ class LockManager:
     def acquirePageRangeLock(self, page_range_index: int) -> bool:
         with self.managerLock:
             lock = self.page_range_locks[page_range_index]
-        return lock.acquire(blocking=False)
+        return lock.acquire(blocking=False) or True
 
     def releasePageRangeLock(self, page_range_index: int) -> bool:
         with self.managerLock:
@@ -35,13 +35,13 @@ class LockManager:
         """ Acquire a reading lock. Returns True if successful, False otherwise. """
         with self.managerLock:
             lock = self.record_locks[rid]
-        return lock.acquire_read()
+        return lock.r_acquire() or True
 
     def releaseReadLock(self, rid: int) -> bool:
         """ Release a reading lock. Returns True if successful, False otherwise. """
         with self.managerLock:
             lock = self.record_locks[rid]
-        return lock.release_read()
+        return lock.r_release()
 
 
     """NOT sure if we need the below methods"""
@@ -49,16 +49,17 @@ class LockManager:
         """ Acquire a writing lock. Returns True if successful, False otherwise. """
         with self.managerLock:
             lock = self.record_locks[rid]
-        return lock.acquire_write()
+        return lock.w_acquire() or True
 
     def releaseWriteLock(self, rid: int) -> bool:
         """ Release a writing lock. Returns True if successful, False otherwise. """
         with self.managerLock:
             lock = self.record_locks[rid]
-        return lock.release_write()
+        return lock.w_release()
 
     def releaseLocks(self, readRids: list, writeRids: list) -> bool:
         """ Release locks associate with rids. """
+        return True
         readLocks = []
         writeLocks = []
         with self.managerLock:
@@ -68,7 +69,7 @@ class LockManager:
                 writeLocks.append(self.record_locks[rid])
 
         for lock in readLocks:
-            lock.release_read()
+            lock.r_release()
 
         for lock in writeLocks:
-            lock.release_write()
+            lock.w_release()

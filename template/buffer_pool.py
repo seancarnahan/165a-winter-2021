@@ -120,7 +120,7 @@ class BufferPool:
         for i in range(len(self.pageRanges)):
             page_range = self.pageRanges[i]
 
-            if page_range.tableName == table_name and page_range.id == page_range_index:
+            if page_range.table_name == table_name and page_range.id == page_range_index:
                 isPageRangeInBP = True
                 break
 
@@ -150,7 +150,7 @@ class BufferPool:
         for i in range(len(self.pageRanges)):
             pageRange = self.pageRanges[i]
 
-            if pageRange.tableName == table_name and pageRange.id == page_range_index:
+            if pageRange.table_name == table_name and pageRange.id == page_range_index:
                 return i
 
     """
@@ -252,7 +252,7 @@ class BufferPool:
     """
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
         for page_range in self.pageRanges:
-            if page_range.tableName == table_name and page_range.id == page_range_index:
+            if page_range.table_name == table_name and page_range.id == page_range_index:
                 return page_range
 
     """

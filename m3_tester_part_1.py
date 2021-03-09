@@ -43,4 +43,16 @@ for i in range(0, 1000):
 for i in range(num_threads):
     transaction_workers[i].run()
 
+# TODO(gabriel) - REMOVE EVERYTHING BEFORE db.close() BEFORE SUBMITTING - TESTING PURPOSES ONLY
+q = Query(grades_table)
+score = len(keys)
+for key in keys:
+    correct = records[key]
+    result = q.select(key, 0, [1,1,1,1,1]).read_result[0].columns
+    if correct != result:
+        print('select error on primary key', key, ':', result, ', correct:', correct)
+        score -= 1
+print('Score', score, '/', len(keys))
+
+
 db.close()

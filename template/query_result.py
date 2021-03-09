@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 class QueryResult:
     """
@@ -8,8 +9,8 @@ class QueryResult:
         self.is_successful = False
         self.key = None
         self.column_data = None
-        self.read_locks = {}  # key: table_name ; values = [RIDs]
-        self.write_locks = {}  # key: table_name ; values = [RIDs]
+        self.read_locks = defaultdict(list)  # key: table_name ; values = [RIDs]
+        self.write_locks = defaultdict(list)  # key: table_name ; values = [RIDs]
         self.read_result = None  # only set for SELECTs and SUMs
 
     def set_is_successful(self, is_successful: bool):

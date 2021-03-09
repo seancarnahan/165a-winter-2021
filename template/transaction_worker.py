@@ -2,11 +2,15 @@ from template.table import Table, Record
 from template.index import Index
 import threading
 
+
 class TransactionWorker:
     """
     # Creates a transaction worker object.
     """
-    def __init__(self, transactions = []):
+
+    def __init__(self, transactions: list = None):
+        if transactions is None:
+            transactions = []
         self.stats = []
         self.transactions = transactions
         self.result = 0
@@ -16,12 +20,14 @@ class TransactionWorker:
     """
     Appends t to transactions
     """
+
     def add_transaction(self, t):
         self.transactions.append(t)
 
     """
     Runs a transaction
     """
+
     def run(self):
         for transaction in self.transactions:
             # each transaction returns True if committed or False if aborted
