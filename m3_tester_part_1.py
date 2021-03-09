@@ -4,6 +4,7 @@ from template.transaction import Transaction
 from template.transaction_worker import TransactionWorker
 from template.config import init
 
+import time
 from random import choice, randint, sample, seed
 
 init()
@@ -42,6 +43,10 @@ for i in range(0, 1000):
 # Commit to disk
 for i in range(num_threads):
     transaction_workers[i].run()
+
+
+time.sleep(5)
+print("end sleep")
 
 # TODO(gabriel) - REMOVE EVERYTHING BEFORE db.close() BEFORE SUBMITTING - TESTING PURPOSES ONLY
 q = Query(grades_table)
