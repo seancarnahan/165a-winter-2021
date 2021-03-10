@@ -43,8 +43,6 @@ class LockManager:
             lock = self.record_locks[rid]
         return lock.r_release()
 
-
-    """NOT sure if we need the below methods"""
     def acquireWriteLock(self, rid: int) -> bool:
         """ Acquire a writing lock. Returns True if successful, False otherwise. """
         with self.managerLock:
