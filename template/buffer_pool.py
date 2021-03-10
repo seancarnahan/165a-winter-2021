@@ -1,6 +1,7 @@
 from template.config import *
 from template.page_range import PageRange
 from shutil import rmtree # used to remove directories
+from threading import Lock
 import copy
 import os
 import pickle
@@ -13,6 +14,7 @@ class BufferPool:
         self.size = BUFFER_POOL_NUM_OF_PRs
         self.pageRanges = []  # / list[PageRange(page_range_index, table_name)]
         self.db_path = "./disk"
+        self.bp_lock = Lock()
 
         """
         # BELOW: MetaData that persists even after DB is closed
@@ -116,31 +118,32 @@ class BufferPool:
     """
 
     def loadPageRange(self, table_name, page_range_index):
-        isPageRangeInBP = False
+        with self.bp_lock:
+            isPageRangeInBP = False
 
-        # check if pageRange is in BufferPool
-        for i in range(len(self.pageRanges)):
-            page_range = self.pageRanges[i]
+            # check if pageRange is in BufferPool
+            for i in range(len(self.pageRanges)):
+                page_range = self.pageRanges[i]
 
-            if page_range.table_name == table_name and page_range.id == page_range_index:
-                isPageRangeInBP = True
-                break
+                if page_range.table_name == table_name and page_range.id == page_range_index:
+                    isPageRangeInBP = True
+                    break
 
-        # PageRange is not currently in BufferPool
-        if not isPageRangeInBP:
-            # request that desired PageRange gets added to BufferPool
-            self.requestPageRange(table_name, page_range_index)
+            # PageRange is not currently in BufferPool
+            if not isPageRangeInBP:
+                # request that desired PageRange gets added to BufferPool
+                self.requestPageRange(table_name, page_range_index)
 
-        page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+            page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
 
-        # increment pins
-        self.pins[page_range_index_in_BP] += 1
+            # increment pins
+            self.pins[page_range_index_in_BP] += 1
 
-        # increment requestsPerPR
-        self.requestsPerPR[page_range_index_in_BP] += 1
+            # increment requestsPerPR
+            self.requestsPerPR[page_range_index_in_BP] += 1
 
-        # desired PageRange should be in BufferPool at this point
-        return self.get_page_range_from_buffer_pool( table_name, page_range_index)
+            # desired PageRange should be in BufferPool at this point
+            return self.get_page_range_from_buffer_pool( table_name, page_range_index)
 
 
     def releasePin(self, table_name, page_range_index):
