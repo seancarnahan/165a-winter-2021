@@ -68,8 +68,8 @@ class BufferPool:
         # get the greatest num of tailRecordsSinceLastMerge
         greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
 
-        # Don't need to do merge if less than 100 tail records
-        if greastestNumOfTailRecs[2] <= 100:
+        # Don't need to do merge if less than 50 tail records
+        if greastestNumOfTailRecs[2] <= 50:
             return True
 
         # get TableName and page range index

@@ -48,7 +48,7 @@ class MergeThread(threading.Thread):
                 self.db.merge(table_name=merge_data[0], page_range_index=merge_data[1])
             # else: merge_data is True so no PRs to merge
 
-            time.sleep(self.interval)
+            # time.sleep(self.interval)
 
     def stop_thread(self):
         """
