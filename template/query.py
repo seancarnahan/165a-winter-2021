@@ -2,6 +2,8 @@ from template.config import *
 from template.query_result import QueryResult
 from template.table import Table
 
+import random
+
 
 class Query:
     """
@@ -102,8 +104,18 @@ class Query:
     """
 
     def select(self, key, column, query_columns):
+        id = random.random()
         query_result = QueryResult()
         rids = self.table.index.locate(column, key)
+
+        # rids is coming back empty
+        print("id: " + str(id) + "; rids Length: " + str(len(rids)))
+
+
+        #see what keys are in other situations
+        print("id: " + str(id) + "; key " + str(key))
+        print("id: " + str(id) + "; column " + str(column))
+        print("id: " + str(id) + "; query_columns " + str(query_columns))
 
         # LOCKING RIDS that we are reading
         for rid in rids:
@@ -114,10 +126,12 @@ class Query:
                 query_result.set_read_lock(rid, self.table.table_name)
 
         recordList = []
+
         try:
             for rid in rids:
                 # get the record
                 record = self.table.getLatestupdatedRecord(rid)
+                print("id: " + str(id) + "; RID: " + str(record.RID))
 
                 counter = 0
                 for bit in query_columns:
@@ -125,6 +139,8 @@ class Query:
                     if bit == 0:
                         record.columns[counter - 1] = None
                 recordList.append(record)
+
+            print("id: " + str(id) + "; Record List: " + str(recordList))
 
             query_result.set_key(key)
             query_result.set_read_result(recordList)

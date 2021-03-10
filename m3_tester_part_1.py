@@ -44,6 +44,8 @@ for i in range(0, 1000):
 for i in range(num_threads):
     transaction_workers[i].run()
 
+for i in range(num_threads):
+    transaction_workers[i].thread.join()
 
 time.sleep(5)
 print("end sleep")
