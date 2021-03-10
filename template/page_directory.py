@@ -33,6 +33,11 @@ class PageDirectory:
 
         #attempt to add record PageRange
         if currPageRange.insertBaseRecord(record, recordLocation, lock_manager):
+            # used for commit: update the number of records in
+            records_in_PR_index = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name,
+                                                                                      locPRIndex)
+            self.bufferPool.recordsInPageRange[records_in_PR_index][2] += 1
+
             #unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
 
@@ -67,6 +72,11 @@ class PageDirectory:
 
             #Recursive -> attempt to add record to PageRange
             currPageRange.insertBaseRecord(record, recordLocation, lock_manager)
+
+            # used for commit: update the number of records in
+            records_in_PR_index = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name,
+                                                                                                 locPRIndex)
+            self.bufferPool.recordsInPageRange[records_in_PR_index][2] += 1
 
             #unload the pin
             self.bufferPool.releasePin(self.table_name, locPRIndex)
@@ -103,6 +113,7 @@ class PageDirectory:
 
         tailRecordsSinceLastMergeIndex = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name, locPRIndex)
         self.bufferPool.tailRecordsSinceLastMerge[tailRecordsSinceLastMergeIndex][2] += 1
+        self.bufferPool.recordsInPageRange[tailRecordsSinceLastMergeIndex][2] += 1
 
         #decrement pin
         self.bufferPool.releasePin(self.table_name, locPRIndex)
