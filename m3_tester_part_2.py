@@ -76,6 +76,9 @@ for j in range(0, num_threads):
 for transaction_worker in transaction_workers:
     transaction_worker.run()
 
+for transaction_worker in transaction_workers:
+    transaction_worker.waitTilCompletion()
+
 score = len(keys)
 for key in keys:
     correct = records[key]
