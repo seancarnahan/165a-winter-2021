@@ -1,7 +1,7 @@
 from template.config import *
 from template.page_range import PageRange
 from shutil import rmtree # used to remove directories
-from threading import Lock
+from threading import RLock
 import copy
 import os
 import pickle
@@ -14,7 +14,7 @@ class BufferPool:
         self.size = BUFFER_POOL_NUM_OF_PRs
         self.pageRanges = []  # / list[PageRange(page_range_index, table_name)]
         self.db_path = "./disk"
-        self.bp_lock = Lock()
+        self.bp_lock = RLock()
 
         """
         # BELOW: MetaData that persists even after DB is closed

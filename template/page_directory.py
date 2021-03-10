@@ -74,8 +74,8 @@ class PageDirectory:
             currPageRange.insertBaseRecord(record, recordLocation, lock_manager)
 
             # used for commit: update the number of records in
-            records_in_PR_index = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name,
-                                                                                                 locPRIndex)
+            records_in_PR_index = self.bufferPool.get_tailRecordsSinceLastMerge_index(self.table_name, locPRIndex)
+
             self.bufferPool.recordsInPageRange[records_in_PR_index][2] += 1
 
             #unload the pin
