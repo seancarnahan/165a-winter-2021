@@ -13,9 +13,9 @@ def list_diff(list1, list2):
     :param list1: list
     :param list2: list
     """
-    tempList1 = set(tuple(x) for x in list1)
-    tempList2 = set(tuple(x) for x in list2)
-    return list(list(set(tempList1) - set(tempList2)) + list(set(tempList2) - set(tempList1)))
+    tempList1 = set(tuple(x[:2]) for x in list1)
+    tempList2 = set(tuple(x[:2]) for x in list2)
+    return list(list(tempList1 - tempList2) + list(tempList2 - tempList1))
 
 
 class Transaction:
@@ -28,7 +28,7 @@ class Transaction:
         self.rollback_queries = []
         self.db = None
         self.db_buffer_pool = None
-        self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
+        self.bp_recordsInPageRange = []  # list of lists from buffer pool
         self.acquiredReadLocks = defaultdict(list)  # key: table_name ; values = [RIDs]
         self.acquiredWriteLocks = defaultdict(list)  # key: table_name ; values = [RIDs]
 
@@ -53,7 +53,7 @@ class Transaction:
             front_query_obj = self.parse_query_method(self.queries[0][0])
             self.db = front_query_obj.table.parent_db
             self.db_buffer_pool = self.db.bufferPool
-            self.bp_tailRecordsSinceLastMerge = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
+            self.bp_recordsInPageRange = copy.deepcopy(self.db_buffer_pool.recordsInPageRange)
 
         for query, args in self.queries:
             query_type = str(query).split()[2].split(".")[1]
@@ -192,24 +192,22 @@ class Transaction:
         dict_of_PRs_to_commit = {}  # dict of { 'table_name': [pr_index1, pr_index2] }
 
         # list of lists in changed_tRSLM not originally in bp_tailRecordsSinceLastMerge
-        # GeeksforGeeks diff solution
-        new_prs = list_diff(changed_tRSLM, self.bp_tailRecordsSinceLastMerge)
-        # numpy diff function solution
-        # new_prs = np.setdiff1d(changed_tRSLM, self.bp_tailRecordsSinceLastMerge)
-        # new_prs.tolist()
+        new_prs = list_diff(changed_tRSLM, self.bp_recordsInPageRange)
 
         for pr_list in changed_tRSLM:
             # create a new key with table_name
             if pr_list[0] not in dict_of_PRs_to_commit.keys():
                 dict_of_PRs_to_commit[pr_list[0]] = []
 
-            for old_pr_list in self.bp_tailRecordsSinceLastMerge:
+            for old_pr_list in self.bp_recordsInPageRange:
                 # iterate through all lists and find matching table_name, pr_index
                 # we need to commit that pr if changes have been made to it
                 if pr_list[0] == old_pr_list[0] and pr_list[1] == old_pr_list[1] and pr_list[2] != old_pr_list[2]:
                     dict_of_PRs_to_commit[pr_list[0]].append(pr_list[1])  # append the PR_index
 
         if new_prs:
+            # note: new_prs is a list of lists having the table_name and pr_index
+            # there is no record count
             for pr_list in new_prs:
                 # create a new key with table_name
                 if pr_list[0] not in dict_of_PRs_to_commit.keys():
@@ -228,7 +226,7 @@ class Transaction:
         lock_manager.unlock_records( # locked_records = [RIDs])
         :return: True, if commit is successful
         """
-        changed_tRSLM = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
+        changed_tRSLM = copy.deepcopy(self.db_buffer_pool.recordsInPageRange)
         dict_of_PRs_to_commit = self.affected_page_ranges(changed_tRSLM=changed_tRSLM)
 
         for table_name in dict_of_PRs_to_commit.keys():

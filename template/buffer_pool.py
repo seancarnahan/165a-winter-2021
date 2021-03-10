@@ -31,6 +31,8 @@ class BufferPool:
 
         # list of [tableName, PR_index_rel_to_table, tailRecordsSinceLastMerge]
         self.tailRecordsSinceLastMerge = []
+        # list of [table_name, PR_index_rel_to_table, totalRecords]
+        self.recordsInPageRange = []
 
         """ 
         BELOW: State of current Page Ranges in BufferPool
@@ -221,6 +223,7 @@ class BufferPool:
         page_range_index = self.currPageRangeIndexes[table_name]
 
         self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
+        self.recordsInPageRange.append([table_name, page_range_index, 0])
 
         page_range = PageRange(num_of_cols, table_name, page_range_index)
 
