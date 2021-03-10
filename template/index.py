@@ -59,7 +59,7 @@ class Index:
         """
         for i in range(len(self.indices)):
             if self.indices[i] is not None:
-                self.removeRIDFromIndex(i, rid, values[i])
+                self.removeRIDFromIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
 
     def locate(self, column, value):
         """

@@ -48,14 +48,9 @@ class PageRange:
             if locBPIndex > 1:
                 return False
 
-            # If locked, then wait
-            while not lock_manager.acquirePageRangeLock(recordLocation[1]):
-                continue
+            lock_manager.acquirePageRangeLock(recordLocation[1])
 
-            if locBPIndex in self.takenBasePages:
-                # necessary base page is already created
-                pass
-            else:
+            if locBPIndex not in self.takenBasePages:
                 # create a new base page
                 if not self.addNewBasePage(locBPIndex):
                     return False  # create a new page range
@@ -93,13 +88,9 @@ class PageRange:
             recordLocation.append(locTPIndex)
 
             # If locked, then wait
-            while not lock_manager.acquirePageRangeLock(recordLocation[1]):
-                continue
+            lock_manager.acquirePageRangeLock(recordLocation[1])
 
-            if locTPIndex in self.takenTailPages:
-                # necessary tail page is already created
-                pass
-            else:
+            if locTPIndex not in self.takenTailPages:
                 # create a new tail page
                 self.addNewTailPage(locTPIndex)
 

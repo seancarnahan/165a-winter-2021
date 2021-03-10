@@ -15,7 +15,7 @@ class LockManager:
         self.page_range_locks = defaultdict(Lock)
 
     def acquireTableLock(self) -> bool:
-        return self.table_lock.acquire(blocking=False) or True
+        return self.table_lock.acquire()
 
     def releaseTableLock(self):
         self.table_lock.release()
@@ -23,7 +23,7 @@ class LockManager:
     def acquirePageRangeLock(self, page_range_index: int) -> bool:
         with self.managerLock:
             lock = self.page_range_locks[page_range_index]
-        return lock.acquire(blocking=False) or True
+        return lock.acquire()
 
     def releasePageRangeLock(self, page_range_index: int) -> bool:
         with self.managerLock:
@@ -35,7 +35,7 @@ class LockManager:
         """ Acquire a reading lock. Returns True if successful, False otherwise. """
         with self.managerLock:
             lock = self.record_locks[rid]
-        return lock.r_acquire() or True
+        return lock.r_acquire()
 
     def releaseReadLock(self, rid: int) -> bool:
         """ Release a reading lock. Returns True if successful, False otherwise. """
@@ -49,7 +49,7 @@ class LockManager:
         """ Acquire a writing lock. Returns True if successful, False otherwise. """
         with self.managerLock:
             lock = self.record_locks[rid]
-        return lock.w_acquire() or True
+        return lock.w_acquire()
 
     def releaseWriteLock(self, rid: int) -> bool:
         """ Release a writing lock. Returns True if successful, False otherwise. """
@@ -57,9 +57,18 @@ class LockManager:
             lock = self.record_locks[rid]
         return lock.w_release()
 
+    def upgradeReadLock(self, rid: int) -> bool:
+        with self.managerLock:
+            lock = self.record_locks[rid]
+        return lock.upgradeLock()
+
+    def downgradeWriteLock(self, rid: int) -> bool:
+        with self.managerLock:
+            lock = self.record_locks[rid]
+        return lock.downgradeLock()
+
     def releaseLocks(self, readRids: list, writeRids: list) -> bool:
         """ Release locks associate with rids. """
-        return True
         readLocks = []
         writeLocks = []
         with self.managerLock:

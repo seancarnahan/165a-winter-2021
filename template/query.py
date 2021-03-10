@@ -45,18 +45,12 @@ class Query:
         for value in range(self.table.num_all_columns - RECORD_COLUMN_OFFSET):
             values.append(0)
         try:
-            status = self.table.lock_manager.acquireWriteLock(rid[0])
-            if not status:
-                return query_result
-            else:
-                query_result.set_write_lock(rid[0], self.table.table_name)
-
             prevRecordColData = self.table.updateRecord(key, rid[0], values, deleteFlag=True)
 
             query_result.set_column_data(prevRecordColData)
             query_result.set_is_successful(True)
             return query_result
-        except:
+        except Exception as e:
             return query_result
 
     """
@@ -73,10 +67,10 @@ class Query:
     """
     def insert(self, *columns):
         query_result = QueryResult()
-        query_result.set_key(columns[0])
+        query_result.set_key(columns[self.table.key])
 
         try:
-            self.table.createNewRecord(columns[0], columns)
+            self.table.createNewRecord(columns[self.table.key], columns)
 
             query_result.set_is_successful(True)
             return query_result
@@ -104,14 +98,6 @@ class Query:
     def select(self, key, column, query_columns):
         query_result = QueryResult()
         rids = self.table.index.locate(column, key)
-
-        # LOCKING RIDS that we are reading
-        for rid in rids:
-            status = self.table.lock_manager.acquireReadLock(rid)
-            if not status:
-                return query_result
-            else:
-                query_result.set_read_lock(rid, self.table.table_name)
 
         recordList = []
         try:
@@ -154,12 +140,6 @@ class Query:
         rids = self.table.index.locate(self.table.key, key)
         try:
             for rid in rids:
-                status = self.table.lock_manager.acquireWriteLock(rid)
-                if not status:
-                    return query_result
-                else:
-                    query_result.set_write_lock(rid, self.table.table_name)
-
                 prevRecordColData = self.table.updateRecord(self.table.key, rid, columns)
 
             query_result.set_column_data(prevRecordColData)
@@ -179,14 +159,7 @@ class Query:
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         query_result = QueryResult()
-        ridRange = self.table.index.locate_range(start_range, end_range,
-                                                 self.table.key)
-        for rid in ridRange:
-            status = self.table.lock_manager.acquireReadLock(rid)
-            if not status:
-                return query_result
-            else:
-                query_result.set_read_lock(rid, self.table.table_name)
+        ridRange = self.table.index.locate_range(start_range, end_range, self.table.key)
 
         if ridRange == []:
             return query_result

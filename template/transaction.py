@@ -29,8 +29,8 @@ class Transaction:
         self.db = None
         self.db_buffer_pool = None
         self.bp_tailRecordsSinceLastMerge = []  # list of lists from buffer pool
-        self.acquiredReadLocks = defaultdict(list)  # key: table_name ; values = [RIDs]
-        self.acquiredWriteLocks = defaultdict(list)  # key: table_name ; values = [RIDs]
+        self.acquiredReadLocks = defaultdict(set)  # key: table_name ; values = [RIDs]
+        self.acquiredWriteLocks = defaultdict(set)  # key: table_name ; values = [RIDs]
 
     """
     # Adds the given query to this transaction
@@ -56,22 +56,47 @@ class Transaction:
             self.bp_tailRecordsSinceLastMerge = copy.deepcopy(self.db_buffer_pool.tailRecordsSinceLastMerge)
 
         for query, args in self.queries:
+            query_obj = self.parse_query_method(query)
             query_type = str(query).split()[2].split(".")[1]
+            table_name = query_obj.table.table_name
+            index = query_obj.table.index
+            lock_manager = query_obj.table.lock_manager
+
+            if query_type in ("update", "delete"):
+                rids = index.locate(query_obj.table.key, args[0])
+
+                for rid in rids:
+                    if lock_manager.acquireWriteLock(rid) or rid in self.acquiredWriteLocks[table_name]:
+                        self.acquiredWriteLocks[table_name].add(rid)
+                    elif rid in self.acquiredReadLocks[table_name]:
+                        if lock_manager.upgradeReadLock(rid):
+                            self.acquiredReadLocks[table_name].remove(rid)
+                            self.acquiredWriteLocks[table_name].add(rid)
+                        else:
+                            return self.abort()
+                    else:
+                        return self.abort()
+
+            elif query_type in ("select", "sum"):
+                if query_type == "select":
+                    rids = index.locate(args[1], args[0])
+                elif query_type == "sum":
+                    rids = index.locate_range(args[0], args[1], query_obj.table.key)
+
+                for rid in rids:
+                    if rid in self.acquiredWriteLocks[table_name] or rid in self.acquiredReadLocks[table_name]:
+                        continue
+                    elif lock_manager.acquireReadLock(rid):
+                        self.acquiredReadLocks[table_name].add(rid)
+                    else:
+                        return self.abort()
+
             result = query(*args)
 
             # result is now QueryResult Object
             is_successful = result.is_successful
             key = result.key
             column_data = result.column_data
-            read_result = result.read_result
-
-            for table_name in result.read_locks.keys():
-                rid = result.read_locks[table_name]
-                self.acquiredReadLocks[table_name].extend(rid)
-
-            for table_name in result.write_locks.keys():
-                rid = result.write_locks[table_name]
-                self.acquiredWriteLocks[table_name].extend(rid)
 
             # If the query has failed the transaction should abort
             if not is_successful:

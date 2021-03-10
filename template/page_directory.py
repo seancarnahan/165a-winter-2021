@@ -46,8 +46,7 @@ class PageDirectory:
             self.bufferPool.releasePin(self.table_name, locPRIndex)
 
             # acquireTableLock(self, page_range_index: int)
-            while not lock_manager.acquireTableLock():
-                continue
+            lock_manager.acquireTableLock()
 
             # check if PR has already been created
             if self.bufferPool.currPageRangeIndexes[self.table_name] <= locPRIndex:
