@@ -57,46 +57,49 @@ class BufferPool:
     # if nothing to merge return True 
     """
     def getPageRangeForMerge(self):
-        # sort the list of lists by 3rd element: tailRecordsSinceLastMerge
-        sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.tailRecordsSinceLastMerge)
-        sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
+        with self.bp_lock:
+            # sort the list of lists by 3rd element: tailRecordsSinceLastMerge
+            sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.tailRecordsSinceLastMerge)
+            sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
 
-        # Don't need to merge
-        if len(sorted_tailRecordsSinceLastMerge) == 0:
-            return True
+            # Don't need to merge
+            if len(sorted_tailRecordsSinceLastMerge) == 0:
+                return True
 
-        # get the greatest num of tailRecordsSinceLastMerge
-        greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
+            # get the greatest num of tailRecordsSinceLastMerge
+            greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
 
-        # Don't need to do merge if less than 50 tail records
-        if greastestNumOfTailRecs[2] <= 50:
-            return True
+            # Don't need to do merge if less than 50 tail records
+            if greastestNumOfTailRecs[2] <= 50:
+                return True
 
-        # get TableName and page range index
-        return greastestNumOfTailRecs[0:2]
+            # get TableName and page range index
+            return greastestNumOfTailRecs[0:2]
 
     """
     get the desired index in tailRecordsSinceLastMerge based off the params
     """
     def get_tailRecordsSinceLastMerge_index(self, table_name, page_range_index):
+        with self.bp_lock:
+            for i in range(len(self.tailRecordsSinceLastMerge)):
+                curr = self.tailRecordsSinceLastMerge[i]
 
-        for i in range(len(self.tailRecordsSinceLastMerge)):
-            curr = self.tailRecordsSinceLastMerge[i]
-
-            if curr[0] == table_name and curr[1] == page_range_index:
-                return i
-        print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
-        return False
+                if curr[0] == table_name and curr[1] == page_range_index:
+                    return i
+            print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
+            return False
 
     def resetTailPageRecordCount(self, table_name, page_range_index):
-        index = self.get_tailRecordsSinceLastMerge_index(table_name, page_range_index)
+        with self.bp_lock:
+            index = self.get_tailRecordsSinceLastMerge_index(table_name, page_range_index)
 
-        self.tailRecordsSinceLastMerge[index][2] = 0
+            self.tailRecordsSinceLastMerge[index][2] = 0
 
     def setDatabaseLocation(self, path: str):
-        if path[0:2] == "./":
-            path = path[2:]
-        self.db_path = os.path.join(self.db_path, path)
+        with self.bp_lock:
+            if path[0:2] == "./":
+                path = path[2:]
+            self.db_path = os.path.join(self.db_path, path)
 
     def readMetadata(self):
         path = os.path.join(self.db_path, "tables_metadata.txt")
@@ -147,16 +150,18 @@ class BufferPool:
 
 
     def releasePin(self, table_name, page_range_index):
-        #decrement pin
-        page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
-        self.pins[page_range_index_in_BP] -= 1
+        with self.bp_lock:
+            #decrement pin
+            page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+            self.pins[page_range_index_in_BP] -= 1
 
     def get_page_range_index_in_buffer_pool(self, table_name, page_range_index):
-        for i in range(len(self.pageRanges)):
-            pageRange = self.pageRanges[i]
+        with self.bp_lock:
+            for i in range(len(self.pageRanges)):
+                pageRange = self.pageRanges[i]
 
-            if pageRange.table_name == table_name and pageRange.id == page_range_index:
-                return i
+                if pageRange.table_name == table_name and pageRange.id == page_range_index:
+                    return i
 
     """
     # adds PageRange to bufferpool under the assumption that there is already a slot open
@@ -219,19 +224,19 @@ class BufferPool:
     #create a new PageRange on disk
     """
     def addNewPageRangeToDisk(self, table_name):
+        with self.bp_lock:
+            self.currPageRangeIndexes[table_name] += 1
 
-        self.currPageRangeIndexes[table_name] += 1
+            num_of_cols = self.numOfColumns[table_name]
+            page_range_index = self.currPageRangeIndexes[table_name]
 
-        num_of_cols = self.numOfColumns[table_name]
-        page_range_index = self.currPageRangeIndexes[table_name]
+            self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
+            self.recordsInPageRange.append([table_name, page_range_index, 0])
 
-        self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
-        self.recordsInPageRange.append([table_name, page_range_index, 0])
+            page_range = PageRange(num_of_cols, table_name, page_range_index)
 
-        page_range = PageRange(num_of_cols, table_name, page_range_index)
-
-        # add page Range to buffer pool
-        self.write_to_disk(page_range)
+            # add page Range to buffer pool
+            self.write_to_disk(page_range)
 
     """
     :param db_name: name of the DB
@@ -257,9 +262,10 @@ class BufferPool:
     TODO: long
     """
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
-        for page_range in self.pageRanges:
-            if page_range.table_name == table_name and page_range.id == page_range_index:
-                return page_range
+        with self.bp_lock:
+            for page_range in self.pageRanges:
+                if page_range.table_name == table_name and page_range.id == page_range_index:
+                    return page_range
 
     """
     :param table_name: name of the table
@@ -267,17 +273,19 @@ class BufferPool:
     :return the latest PageRange created for the table
     """
     def getCurrPageRangeIndex(self, table_name):
-        return self.currPageRangeIndexes[table_name]
+        with self.bp_lock:
+            return self.currPageRangeIndexes[table_name]
 
     """
     Read Page Range from disk and bring into memory
     """
     def read_from_disk(self, table_name: str, page_range_index: int):  # Gabriel
-        file_path = self.get_path(self.db_path, table_name, page_range_index)
-        fs = open(file_path, "rb")
-        page = pickle.load(fs)
-        fs.close()
-        return page
+        with self.bp_lock:
+            file_path = self.get_path(self.db_path, table_name, page_range_index)
+            fs = open(file_path, "rb")
+            page = pickle.load(fs)
+            fs.close()
+            return page
 
     """
         input: Page Range Object
@@ -286,11 +294,12 @@ class BufferPool:
         returns true if its able to update; else: false
     """
     def write_to_disk(self, page_range: PageRange):
-        table_name = page_range.table_name
-        path = self.get_path(self.db_path, table_name, page_range.id)
-        fs = open(path, "wb")
-        pickle.dump(page_range, fs)
-        fs.close()
+        with self.bp_lock:
+            table_name = page_range.table_name
+            path = self.get_path(self.db_path, table_name, page_range.id)
+            fs = open(path, "wb")
+            pickle.dump(page_range, fs)
+            fs.close()
 
     """
     must return something, make sure to await on this function
@@ -368,54 +377,59 @@ class BufferPool:
             return False
 
     def createTableDirectory(self, table_name):
-        full_path = os.path.join(self.db_path, table_name)
-        os.mkdir(full_path)
+        with self.bp_lock:
+            full_path = os.path.join(self.db_path, table_name)
+            os.mkdir(full_path)
 
     def deleteTableDirectory(self, table_name):
-        full_path = os.path.join(self.db_path, table_name)
-        rmtree(full_path, ignore_errors=True)
+        with self.bp_lock:
+            full_path = os.path.join(self.db_path, table_name)
+            rmtree(full_path, ignore_errors=True)
 
     def createDatabaseDirectory(self):
-        if not os.path.exists(self.db_path):
-            os.mkdir(self.db_path)
-            fs = open(os.path.join(self.db_path, "tables_metadata.txt"), "w")
-            fs.close()
-            fs = open(os.path.join(self.db_path, "page_range_metadata.txt"), "w")
-            fs.close()
+        with self.bp_lock:
+            if not os.path.exists(self.db_path):
+                os.mkdir(self.db_path)
+                fs = open(os.path.join(self.db_path, "tables_metadata.txt"), "w")
+                fs.close()
+                fs = open(os.path.join(self.db_path, "page_range_metadata.txt"), "w")
+                fs.close()
 
     def save(self, tables):
-        headers = "table_name,num_columns,key_column,currentPRIndex\n"
-        path = os.path.join(self.db_path, "tables_metadata.txt")
-        with open(path, "w") as fs:
-            fs.write(headers)
-            for table in tables:
-                table_name = table.table_name
-                key_column = table.key
-                currPRIndex = self.currPageRangeIndexes[table_name]
-                table_entry = "{0},{1},{2},{3}\n".format(table_name, table.num_columns, key_column, currPRIndex)
-                fs.write(table_entry)
+        with self.bp_lock:
+            headers = "table_name,num_columns,key_column,currentPRIndex\n"
+            path = os.path.join(self.db_path, "tables_metadata.txt")
+            with open(path, "w") as fs:
+                fs.write(headers)
+                for table in tables:
+                    table_name = table.table_name
+                    key_column = table.key
+                    currPRIndex = self.currPageRangeIndexes[table_name]
+                    table_entry = "{0},{1},{2},{3}\n".format(table_name, table.num_columns, key_column, currPRIndex)
+                    fs.write(table_entry)
 
-        path = os.path.join(self.db_path, "page_range_metadata.txt")
-        with open(path, "w") as fs:
-            for entry in self.tailRecordsSinceLastMerge:
-                line = "{0},{1},{2}\n".format(*entry)
-                fs.write(line)
+            path = os.path.join(self.db_path, "page_range_metadata.txt")
+            with open(path, "w") as fs:
+                for entry in self.tailRecordsSinceLastMerge:
+                    line = "{0},{1},{2}\n".format(*entry)
+                    fs.write(line)
 
-        for page_range in self.pageRanges:
-            self.write_to_disk(page_range)
+            for page_range in self.pageRanges:
+                self.write_to_disk(page_range)
 
     def load_data(self):
-        path = os.path.join(self.db_path, "tables_metadata.txt")
+        with self.bp_lock:
+            path = os.path.join(self.db_path, "tables_metadata.txt")
 
-        with open(path) as fs:
-            fs.readline()
-            for table_entry in fs:
-                table_name, num_columns, _, currentPRIndex = table_entry.split(",")
-                self.numOfColumns[table_name] = int(num_columns)
-                self.currPageRangeIndexes[table_name] = int(currentPRIndex)
+            with open(path) as fs:
+                fs.readline()
+                for table_entry in fs:
+                    table_name, num_columns, _, currentPRIndex = table_entry.split(",")
+                    self.numOfColumns[table_name] = int(num_columns)
+                    self.currPageRangeIndexes[table_name] = int(currentPRIndex)
 
-        path = os.path.join(self.db_path, "page_range_metadata.txt")
-        with open(path) as fs:
-            for line in fs:
-                table_name, pr_index, tailRecordsRemaining = line.split(",")
-                self.tailRecordsSinceLastMerge.append([table_name, int(pr_index), int(tailRecordsRemaining)])
+            path = os.path.join(self.db_path, "page_range_metadata.txt")
+            with open(path) as fs:
+                for line in fs:
+                    table_name, pr_index, tailRecordsRemaining = line.split(",")
+                    self.tailRecordsSinceLastMerge.append([table_name, int(pr_index), int(tailRecordsRemaining)])
