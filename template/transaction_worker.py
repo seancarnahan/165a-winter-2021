@@ -15,7 +15,7 @@ class TransactionWorker:
         self.transactions = transactions
         self.result = 0
 
-        self.thread = threading.Thread(target=self.run, args=())
+        self.thread = threading.Thread(target=self.execute, args=(self.transactions, self.stats, self.result))
 
     """
     Appends t to transactions
@@ -24,13 +24,18 @@ class TransactionWorker:
     def add_transaction(self, t):
         self.transactions.append(t)
 
+    @staticmethod
+    def execute(transactions, stats, result):
+
+        for transaction in transactions:
+            # each transaction returns True if committed or False if aborted
+            stats.append(transaction.run())
+        # stores the number of transactions that committed
+        result = len(list(filter(lambda x: x, stats)))
+
     """
     Runs a transaction
     """
-
     def run(self):
-        for transaction in self.transactions:
-            # each transaction returns True if committed or False if aborted
-            self.stats.append(transaction.run())
-        # stores the number of transactions that committed
-        self.result = len(list(filter(lambda x: x, self.stats)))
+        self.thread.start()
+
