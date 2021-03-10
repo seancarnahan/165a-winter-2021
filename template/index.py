@@ -8,6 +8,8 @@ Index will be RHash
 from collections import defaultdict
 from template.config import *
 
+from threading import Lock
+
 
 class InvalidIndexError(Exception):
     def __init__(self, column):
@@ -31,15 +33,17 @@ class Index:
         self.indices = [None] * table.num_all_columns
         self.seeds = [None] * table.num_all_columns
         self.table = table
+        self.lock = Lock()
 
     def insert(self, rid, values):
         """
         :param rid: int. rid to insert.
         :param values: list. values corresponding to rid.
         """
-        for i in range(len(self.indices)):
-            if self.indices[i] is not None:
-                self.insertIntoIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
+        with self.lock:
+            for i in range(len(self.indices)):
+                if self.indices[i] is not None:
+                    self.insertIntoIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
 
     def updateIndexes(self, rid, oldValues, newValues):
         """
@@ -47,19 +51,21 @@ class Index:
         :param oldValues: list. old values corresponds to rid.
         :param newValues: list. updated values corresponding to rid.
         """
-        for i in range(len(self.indices)):
-            if self.indices[i] is not None:
-                if oldValues[i-RECORD_COLUMN_OFFSET] != newValues[i-RECORD_COLUMN_OFFSET]:
-                    self.update_index(i, rid, oldValues[i-RECORD_COLUMN_OFFSET], newValues[i-RECORD_COLUMN_OFFSET])
+        with self.lock:
+            for i in range(len(self.indices)):
+                if self.indices[i] is not None:
+                    if oldValues[i-RECORD_COLUMN_OFFSET] != newValues[i-RECORD_COLUMN_OFFSET]:
+                        self.update_index(i, rid, oldValues[i-RECORD_COLUMN_OFFSET], newValues[i-RECORD_COLUMN_OFFSET])
 
     def remove(self, rid, values):
         """
         :param rid: int. rid to remove
         :param values: list. values corresponds to rid.
         """
-        for i in range(len(self.indices)):
-            if self.indices[i] is not None:
-                self.removeRIDFromIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
+        with self.lock:
+            for i in range(len(self.indices)):
+                if self.indices[i] is not None:
+                    self.removeRIDFromIndex(i, rid, values[i-RECORD_COLUMN_OFFSET])
 
     def locate(self, column, value):
         """
@@ -70,16 +76,17 @@ class Index:
         :returns: A list of RIDs that have the value "value" in the column "column".
         """
 
-        try:
-            if self.indices[column+RECORD_COLUMN_OFFSET] is None:
-                raise InvalidIndexError(column+RECORD_COLUMN_OFFSET)
-        except IndexError:
-            raise InvalidColumnError(column+RECORD_COLUMN_OFFSET)
+        with self.lock:
+            try:
+                if self.indices[column+RECORD_COLUMN_OFFSET] is None:
+                    raise InvalidIndexError(column+RECORD_COLUMN_OFFSET)
+            except IndexError:
+                raise InvalidColumnError(column+RECORD_COLUMN_OFFSET)
 
-        if value not in self.indices[column+RECORD_COLUMN_OFFSET].keys():
-            return []
+            if value not in self.indices[column+RECORD_COLUMN_OFFSET].keys():
+                return []
 
-        return self.indices[column+RECORD_COLUMN_OFFSET][value][0]
+            return self.indices[column+RECORD_COLUMN_OFFSET][value][0]
 
     def locate_range(self, begin, end, column):
         """
@@ -90,37 +97,38 @@ class Index:
         :param column: int. The column to search under with column's index.
         :returns: A list of RIDs that have a value that falls between [begin,end] in column "column".
         """
-        try:
-            if self.indices[column+RECORD_COLUMN_OFFSET] is None:
-                raise InvalidIndexError(column)
-        except IndexError:
-            raise InvalidColumnError(column)
-
-        matching_rids = []
-        seeds = self.seeds[column+RECORD_COLUMN_OFFSET]
-
-        if end < seeds[0] or begin > seeds[2]:
-            return matching_rids
-
-        index = self.indices[column+RECORD_COLUMN_OFFSET]
-
-        currKey = seeds[0]  # set currKey to minKey
-
-        if begin > seeds[1]: # if begin > medianKey, skip everything before medianKey
-            currKey = seeds[1]
-
-        if begin == seeds[2]: # if begin = maxKey, make currKey maxKey
-            currKey = seeds[2]
-
-        while currKey <= end:
+        with self.lock:
             try:
-                if currKey in range(begin, end+1):
-                    matching_rids.extend(index[currKey][0])
-                currKey = index[currKey][1]
-                if currKey is None:
-                    break
+                if self.indices[column+RECORD_COLUMN_OFFSET] is None:
+                    raise InvalidIndexError(column)
             except IndexError:
-                break;
+                raise InvalidColumnError(column)
+
+            matching_rids = []
+            seeds = self.seeds[column+RECORD_COLUMN_OFFSET]
+
+            if end < seeds[0] or begin > seeds[2]:
+                return matching_rids
+
+            index = self.indices[column+RECORD_COLUMN_OFFSET]
+
+            currKey = seeds[0]  # set currKey to minKey
+
+            if begin > seeds[1]: # if begin > medianKey, skip everything before medianKey
+                currKey = seeds[1]
+
+            if begin == seeds[2]: # if begin = maxKey, make currKey maxKey
+                currKey = seeds[2]
+
+            while currKey <= end:
+                try:
+                    if currKey in range(begin, end+1):
+                        matching_rids.extend(index[currKey][0])
+                    currKey = index[currKey][1]
+                    if currKey is None:
+                        break
+                except IndexError:
+                    break;
 
         return matching_rids
 
@@ -181,7 +189,6 @@ class Index:
 
         self.removeRIDFromIndex(column_number, rid, oldValue)
         self.insertIntoIndex(column_number, rid, newValue)
-
         return True
 
     def insertIntoIndex(self, column_number, rid, value):
