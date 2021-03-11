@@ -62,6 +62,8 @@ class PageRange:
             # if fails to add the record throw error because this should be fresh
             if currBasePage.setPageRecord(record, recordLocation, lock_manager) == False:
                 print("ISSUE could not add a record to a fresh base page")
+            else:
+                return True
 
     # record location = [recordType, locPRIndex]
     # returns the RID of the newly created Tail Record
