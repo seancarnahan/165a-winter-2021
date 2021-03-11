@@ -1,11 +1,10 @@
 from template.config import *
 from template.page_range import PageRange
 from shutil import rmtree # used to remove directories
-from threading import RLock
+from threading import RLock, Condition, Lock
 import copy
 import os
 import pickle
-import time
 
 
 class BufferPool:
@@ -15,6 +14,7 @@ class BufferPool:
         self.pageRanges = []  # / list[PageRange(page_range_index, table_name)]
         self.db_path = "./disk"
         self.bp_lock = RLock()
+        self.pr_available_to_evict_condition = Condition(self.bp_lock)
 
         """
         # BELOW: MetaData that persists even after DB is closed
@@ -57,41 +57,44 @@ class BufferPool:
     # if nothing to merge return True 
     """
     def getPageRangeForMerge(self):
-        # sort the list of lists by 3rd element: tailRecordsSinceLastMerge
-        sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.tailRecordsSinceLastMerge)
-        sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
+        with self.bp_lock:
+            # sort the list of lists by 3rd element: tailRecordsSinceLastMerge
+            sorted_tailRecordsSinceLastMerge = copy.deepcopy(self.tailRecordsSinceLastMerge)
+            sorted_tailRecordsSinceLastMerge.sort(key=lambda x: x[2])
 
-        # Don't need to merge
-        if len(sorted_tailRecordsSinceLastMerge) == 0:
-            return True
+            # Don't need to merge
+            if len(sorted_tailRecordsSinceLastMerge) == 0:
+                return True
 
-        # get the greatest num of tailRecordsSinceLastMerge
-        greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
+            # get the greatest num of tailRecordsSinceLastMerge
+            greastestNumOfTailRecs = sorted_tailRecordsSinceLastMerge[-1]
 
-        # Don't need to do merge if less than 50 tail records
-        if greastestNumOfTailRecs[2] <= 50:
-            return True
+            # Don't need to do merge if less than 50 tail records
+            if greastestNumOfTailRecs[2] <= 50:
+                return True
 
-        # get TableName and page range index
-        return greastestNumOfTailRecs[0:2]
+            # get TableName and page range index
+            return greastestNumOfTailRecs[0:2]
 
     """
     get the desired index in tailRecordsSinceLastMerge based off the params
     """
     def get_tailRecordsSinceLastMerge_index(self, table_name, page_range_index):
 
-        for i in range(len(self.tailRecordsSinceLastMerge)):
-            curr = self.tailRecordsSinceLastMerge[i]
+        with self.bp_lock:
+            for i in range(len(self.tailRecordsSinceLastMerge)):
+                curr = self.tailRecordsSinceLastMerge[i]
 
-            if curr[0] == table_name and curr[1] == page_range_index:
-                return i
-        print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
-        return False
+                if curr[0] == table_name and curr[1] == page_range_index:
+                    return i
+            print(" invalid params on [get_tailRecordsSinceLastMerge_index]")
+            return False
 
     def resetTailPageRecordCount(self, table_name, page_range_index):
-        index = self.get_tailRecordsSinceLastMerge_index(table_name, page_range_index)
+        with self.bp_lock:
+            index = self.get_tailRecordsSinceLastMerge_index(table_name, page_range_index)
 
-        self.tailRecordsSinceLastMerge[index][2] = 0
+            self.tailRecordsSinceLastMerge[index][2] = 0
 
     def setDatabaseLocation(self, path: str):
         if path[0:2] == "./":
@@ -147,16 +150,20 @@ class BufferPool:
 
 
     def releasePin(self, table_name, page_range_index):
-        #decrement pin
-        page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
-        self.pins[page_range_index_in_BP] -= 1
+        with self.pr_available_to_evict_condition:
+            #decrement pin
+            page_range_index_in_BP = self.get_page_range_index_in_buffer_pool(table_name, page_range_index)
+            self.pins[page_range_index_in_BP] -= 1
+            if self.pins[page_range_index_in_BP] == 0:
+                self.pr_available_to_evict_condition.notify()
 
     def get_page_range_index_in_buffer_pool(self, table_name, page_range_index):
-        for i in range(len(self.pageRanges)):
-            pageRange = self.pageRanges[i]
+        with self.bp_lock:
+            for i in range(len(self.pageRanges)):
+                pageRange = self.pageRanges[i]
 
-            if pageRange.table_name == table_name and pageRange.id == page_range_index:
-                return i
+                if pageRange.table_name == table_name and pageRange.id == page_range_index:
+                    return i
 
     """
     # adds PageRange to bufferpool under the assumption that there is already a slot open
@@ -164,17 +171,18 @@ class BufferPool:
     :param page_range: filled PageRange()
     """
     def add_page_range_to_buffer_pool(self, page_range):
-        # init a pin count
-        self.pins.append(0)
+        with self.bp_lock:
+            # init a pin count
+            self.pins.append(0)
 
-        # init a request per page range count
-        self.requestsPerPR.append(0)
+            # init a request per page range count
+            self.requestsPerPR.append(0)
 
-        # add a dirty bit to dirty bit tracker
-        self.dirtyBitTracker.append(False)
+            # add a dirty bit to dirty bit tracker
+            self.dirtyBitTracker.append(False)
 
-        # add page range to bufferpool
-        self.pageRanges.append(page_range)
+            # add page range to bufferpool
+            self.pageRanges.append(page_range)
 
     """
     # this gets called only when the desired page range is not in the bufferPool
@@ -195,21 +203,22 @@ class BufferPool:
     """
     #TODO: make this async
     def requestPageRange(self, table_name, page_range_index):
-        if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
-            """
-            # python is inherently synchronous by nature: However,
-            # if this function never finds a page range to remove this will
-            # loop on forever -> could potentially cause issues
-            """
-            self.remove_LFU_page()
+        with self.bp_lock:
+            if len(self.pageRanges) >= BUFFER_POOL_NUM_OF_PRs:
+                """
+                # python is inherently synchronous by nature: However,
+                # if this function never finds a page range to remove this will
+                # loop on forever -> could potentially cause issues
+                """
+                self.remove_LFU_page()
 
-        try:
-            page_range = self.read_from_disk(table_name, page_range_index)
-        except FileNotFoundError as e:
-            self.addNewPageRangeToDisk(table_name)
-            page_range = self.read_from_disk(table_name, page_range_index)
+            try:
+                page_range = self.read_from_disk(table_name, page_range_index)
+            except FileNotFoundError as e:
+                self.addNewPageRangeToDisk(table_name)
+                page_range = self.read_from_disk(table_name, page_range_index)
 
-        self.add_page_range_to_buffer_pool(page_range)
+            self.add_page_range_to_buffer_pool(page_range)
 
 
     """
@@ -219,19 +228,19 @@ class BufferPool:
     #create a new PageRange on disk
     """
     def addNewPageRangeToDisk(self, table_name):
+        with self.bp_lock:
+            self.currPageRangeIndexes[table_name] += 1
 
-        self.currPageRangeIndexes[table_name] += 1
+            num_of_cols = self.numOfColumns[table_name]
+            page_range_index = self.currPageRangeIndexes[table_name]
 
-        num_of_cols = self.numOfColumns[table_name]
-        page_range_index = self.currPageRangeIndexes[table_name]
+            self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
+            self.recordsInPageRange.append([table_name, page_range_index, 0])
 
-        self.tailRecordsSinceLastMerge.append([table_name, page_range_index, 0])
-        self.recordsInPageRange.append([table_name, page_range_index, 0])
+            page_range = PageRange(num_of_cols, table_name, page_range_index)
 
-        page_range = PageRange(num_of_cols, table_name, page_range_index)
-
-        # add page Range to buffer pool
-        self.write_to_disk(page_range)
+            # add page Range to buffer pool
+            self.write_to_disk(page_range)
 
     """
     :param db_name: name of the DB
@@ -257,9 +266,10 @@ class BufferPool:
     TODO: long
     """
     def get_page_range_from_buffer_pool(self, table_name, page_range_index):
-        for page_range in self.pageRanges:
-            if page_range.table_name == table_name and page_range.id == page_range_index:
-                return page_range
+        with self.bp_lock:
+            for page_range in self.pageRanges:
+                if page_range.table_name == table_name and page_range.id == page_range_index:
+                    return page_range
 
     """
     :param table_name: name of the table
@@ -267,7 +277,8 @@ class BufferPool:
     :return the latest PageRange created for the table
     """
     def getCurrPageRangeIndex(self, table_name):
-        return self.currPageRangeIndexes[table_name]
+        with self.bp_lock:
+            return self.currPageRangeIndexes[table_name]
 
     """
     Read Page Range from disk and bring into memory
@@ -292,26 +303,21 @@ class BufferPool:
         pickle.dump(page_range, fs)
         fs.close()
 
-    """
-    must return something, make sure to await on this function
-    """
     def remove_LFU_page(self):
-        # find least recently used pageRanges
-        ordered_LFUs = self.order_LFUs()
-        started_looking = time.perf_counter()
-        isRemoved = False
 
-        while not isRemoved:
-            current_time = time.perf_counter()
-            if abs(current_time - started_looking) > 5:
-                print("taking too long to find a page range to remove from BP")
+        with self.pr_available_to_evict_condition:
+            # find least recently used pageRanges
+            ordered_LFUs = self.order_LFUs()
+            isRemoved = False
 
-            for i in range(len(ordered_LFUs)):
-                if self.check_if_pr_not_in_use(ordered_LFUs[i]):
-                    # remove page range
-                    self.removePageRangeFromBufferPool(ordered_LFUs[i])
-                    isRemoved = True
-                    break
+            while not isRemoved:
+                for i in range(len(ordered_LFUs)):
+                    if self.check_if_pr_not_in_use(ordered_LFUs[i]):
+                        # remove page range
+                        self.removePageRangeFromBufferPool(ordered_LFUs[i])
+                        isRemoved = True
+                        break
+                self.pr_available_to_evict_condition.wait()
 
     """
     :param index: the index of the page range in buffer pool
@@ -320,24 +326,25 @@ class BufferPool:
     """
     def removePageRangeFromBufferPool(self, index):
 
-        #check for a dirty bit, if true, write to disk
-        if self.dirtyBitTracker[index] == True:
-            self.write_to_disk(self.pageRanges[index])
+        with self.bp_lock:
+            #check for a dirty bit, if true, write to disk
+            if self.dirtyBitTracker[index] == True:
+                self.write_to_disk(self.pageRanges[index])
 
-        try:
-            # remove page range
-            del self.pageRanges[index]
+            try:
+                # remove page range
+                del self.pageRanges[index]
 
-            # remove dirtyBitTracker
-            del self.dirtyBitTracker[index]
+                # remove dirtyBitTracker
+                del self.dirtyBitTracker[index]
 
-            # remove requestsPerPR
-            del self.requestsPerPR[index]
+                # remove requestsPerPR
+                del self.requestsPerPR[index]
 
-            # remove pin
-            del self.pins[index]
-        except IndexError:
-            print("ERROR in [removePageRangeFromBufferPool]: invalid index")
+                # remove pin
+                del self.pins[index]
+            except IndexError:
+                print("ERROR in [removePageRangeFromBufferPool]: invalid index")
 
     """
     list [least recently used -> most used]

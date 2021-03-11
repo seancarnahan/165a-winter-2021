@@ -10,9 +10,9 @@ class PageDirectory:
 
     #the page range has been updated, update the dirty bit tracker
     def update_page_range_dirty_bit_tracker(self, page_range_index):
-        pr_buffer_pool_index = self.bufferPool.get_page_range_index_in_buffer_pool(self.table_name, page_range_index)
-
-        self.bufferPool.dirtyBitTracker[pr_buffer_pool_index] = True
+        with self.bufferPool.bp_lock:
+            pr_buffer_pool_index = self.bufferPool.get_page_range_index_in_buffer_pool(self.table_name, page_range_index)
+            self.bufferPool.dirtyBitTracker[pr_buffer_pool_index] = True
 
     #returns True when its a success
     def insertBaseRecord(self, record, lock_manager: LockManager):

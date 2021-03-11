@@ -260,6 +260,10 @@ class Transaction:
                 for pr_index in dict_of_PRs_to_commit[table_name]:
                     # get the PageRange object from buffer_pool
                     pr_obj = self.db_buffer_pool.get_page_range_from_buffer_pool(table_name, pr_index)
+                    if pr_obj is None:
+                        self.db_buffer_pool.requestPageRange(table_name, pr_index)
+                        pr_obj = self.db_buffer_pool.get_page_range_from_buffer_pool(table_name, pr_index)
+
                     self.db_buffer_pool.write_to_disk(pr_obj)
 
             # release list of RIDs with read locks, release list of RIDs with write locks
